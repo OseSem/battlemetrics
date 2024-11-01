@@ -35,7 +35,7 @@ class HTTPException(BMException):
 
     def __init__(self, response: _ResponseType, message: str | dict[str, Any] | None) -> None:
         self.response: _ResponseType = response
-        self.status: int = response.status
+        self.status: int = response.status  # type: ignore[reportAccessAttributeIssue]
         self.code: int
         self.text: str
         if isinstance(message, dict):
