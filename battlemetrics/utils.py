@@ -6,8 +6,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Any
 
-    from battlemetrics.types.note import NoteRelationships
-
 __all__ = (
     "remove_html_tags",
     "format_relationships",
