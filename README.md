@@ -1,6 +1,7 @@
 # Battlemetrics API Wrapper
 <center>
 
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 ![PyPI - Version](https://img.shields.io/pypi/v/battlemetrics)
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/battlemetrics)
 
