@@ -1,4 +1,4 @@
-from typing import NamedTuple
+from typing import TypedDict
 
 __all__ = (
     "NoteAttributes",
@@ -7,7 +7,7 @@ __all__ = (
 )
 
 
-class NoteAttributes(NamedTuple):
+class NoteAttributes(TypedDict):
     """Attributes of a Note.
 
     Attributes
@@ -24,14 +24,14 @@ class NoteAttributes(NamedTuple):
         Whether the note is shared.
     """
 
-    clearancelevel: int
-    createdat: str
-    expiresat: str
+    clearanceLevel: int
+    createdAt: str
+    expiresAt: str
     note: str
     shared: bool
 
 
-class NoteRelationships(NamedTuple):
+class NoteRelationships(TypedDict):
     """Relationships of a Note.
 
     Attributes
@@ -49,7 +49,7 @@ class NoteRelationships(NamedTuple):
     user_id: int
 
 
-class Note(NamedTuple):
+class Note(TypedDict):
     """Basic Note Data.
 
     Attributes

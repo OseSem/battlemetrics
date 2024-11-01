@@ -68,6 +68,9 @@ lint.ignore = [
 "battlemetrics/__init__.py" = [
     "F403", # Wildcard imports
 ]
+"battlemetrics/http.py" = [
+    "PLR2004", # Constant variable
+]
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"

@@ -2,16 +2,30 @@ from __future__ import annotations
 
 import asyncio
 from logging import getLogger
-from typing import Any, ClassVar, Literal
+from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 import aiohttp
 import yarl
 
-from battlemetrics.errors import HTTPException
+from battlemetrics.errors import (
+    BMException,
+    Forbidden,
+    HTTPException,
+    NotFound,
+    Unauthorized,
+)
+
+from . import utils
+from .note import Note
+from .types.note import Note as NotePayload
+from .types.note import NoteAttributes, NoteRelationships
+
+if TYPE_CHECKING:
+    from asyncio import AbstractEventLoop
 
 _log = getLogger(__name__)
 
-SUCCESS_STATUS = [200, 201]
+SUCCESS_STATUS = [200, 201, 204]
 
 
 async def json_or_text(
@@ -89,12 +103,16 @@ class Route:
             msg = "Only one of path or url can be provided."
             raise ValueError(msg)
 
-        self.endpoint: str = self.BASE + path if path else url
+        if path:
+            self.endpoint = self.BASE + path
+        elif url:
+            self.endpoint = self.BASE + url
+
         self.method: str = method
-        url = yarl.URL(self.endpoint)
+        yurl = yarl.URL(self.endpoint)
         if parameters:
-            url = url.update_query(**parameters)
-        self.url: str = url.human_repr()
+            yurl = yurl.update_query(**parameters)
+        self.url: str = yurl.human_repr()
 
 
 class HTTPClient:
@@ -105,7 +123,7 @@ class HTTPClient:
         api_key: str,
         connector: aiohttp.BaseConnector | None = None,
         *,
-        loop: asyncio.AbstractEventLoop | None = None,
+        loop: AbstractEventLoop | None = None,
     ) -> None:
         self.loop = loop or asyncio.get_event_loop()
         self.connector = connector
@@ -124,7 +142,7 @@ class HTTPClient:
         using the provided connector and loop.
         """
         if not self.__session or self.__session.closed:
-            self.__session = aiohttp.ClientSession(connector=self.connector)
+            self.__session = aiohttp.ClientSession(connector=self.connector, loop=self.loop)
 
     async def close(self) -> None:
         """Close the :class:`aiohttp.ClientSession` if it exists and is open."""
@@ -168,13 +186,14 @@ class HTTPClient:
 
         _headers = {"Accept": "application/json"}
 
-        headers = headers.update(**_headers) if headers else _headers
+        if headers:
+            _headers.update(**headers)
 
         # TODO: Add a check for the api key.
         if self.api_key:
-            headers["Authorization"] = f"Bearer {self.api_key}"
+            _headers["Authorization"] = f"Bearer {self.api_key}"
 
-        async with self.__session.request(method, url, headers=headers, **kwargs) as response:
+        async with self.__session.request(method, url, headers=_headers, **kwargs) as response:
             _log.debug(f"{method} {url} returned {response.status}")
 
             # errors typically have text involved, so this should be safe 99.5% of the time.
@@ -186,4 +205,137 @@ class HTTPClient:
             if response.status in SUCCESS_STATUS:
                 return data
 
-            raise HTTPException(response, data)
+            if isinstance(data, dict):
+                if response.status == 401:
+                    raise Unauthorized(response, data)
+                if response.status == 403:
+                    raise Forbidden(response, data)
+                if response.status == 404:
+                    raise NotFound(response, data)
+                if response.status == 429:
+                    _log.debug("Being ratelimited..")
+
+                raise HTTPException(response, data)
+
+            raise BMException
+
+    async def get_note(self, player_id: int, note_id: int) -> Note:
+        """Return a note based on player ID and note ID.
+
+        Parameters
+        ----------
+        player_id : int
+            The ID of the player.
+        note_id : int
+            The ID of the note.
+        """
+        url = f"/players/{player_id}/relationships/notes/{note_id}"
+        data = await self.request(
+            Route(
+                method="GET",
+                path=url,
+            ),
+        )
+        if isinstance(data, dict):
+            data = data.get("data")
+
+        return Note(
+            data=NotePayload(
+                id=data.get("id"),  # type: ignore[reportAttributeAccessIssue]
+                type=data.get("type"),  # type: ignore[reportAttributeAccessIssue]
+                attributes=NoteAttributes(
+                    **data.get("attributes", {}),  # type: ignore[reportAttributeAccessIssue]
+                ),
+                relationships=NoteRelationships(
+                    **utils.format_relationships(data.get("relationships", {})),  # type: ignore[reportAttributeAccessIssue]
+                ),
+            ),
+            http=self,
+        )
+
+    async def delete_note(self, player_id: int, note_id: int) -> None:
+        """Delete an existing note.
+
+        Parameters
+        ----------
+            player_id (int): The battlemetrics ID of the player the note is attached to.
+            note_id (int): The note's ID
+
+        Returns
+        -------
+            dict: Response from server.
+        """
+        url = f"/players/{player_id}/relationships/notes/{note_id}"
+        await self.request(
+            Route(
+                method="DELETE",
+                path=url,
+            ),
+        )
+
+    # TODO: (PLR0913): Add attributes instead of a variable for each parameter.
+    async def update_note(
+        self,
+        player_id: int,
+        note_id: int,
+        attributes: NoteAttributes,
+        *,
+        append: bool | None = False,
+    ) -> Note:
+        """Update an existing note.
+
+        Parameters
+        ----------
+            player_id (int): The battlemetrics ID of the user.
+            note_id (int): The ID of the note.
+            content (str): The new content of the note.
+            clearancelevel (int): The new clearance level of the note.
+            shared (bool): Whether this note should be shared.
+            append (bool): Whether to append the new content to the existing note.
+
+        Returns
+        -------
+            dict: Response from server.
+        """
+        if existing := await self.get_note(player_id=player_id, note_id=note_id):
+            existing_content = existing.content
+        else:
+            msg = "Note does not exist."
+            raise ValueError(msg)
+
+        url = f"/players/{player_id}/relationships/notes/{note_id}"
+
+        content = (
+            f"{existing_content}\n{attributes.get("note")}" if append else attributes.get("note")
+        )
+
+        data = {
+            "data": {
+                "type": "playerNote",
+                "id": "example",
+                "attributes": {
+                    "clearanceLevel": f"{attributes.get("clearanceLevel")}",
+                    "note": f"{content}",
+                    "shared": f"{str(attributes.get("shared")).lower()}",
+                },
+            },
+        }
+
+        result = await self.request(
+            Route(
+                method="PATCH",
+                path=url,
+            ),
+            json_dict=data,
+        )
+        return Note(
+            data=NotePayload(
+                id=result.get("id"),  # type: ignore[reportAttributeAccessIssue]
+                type=result.get("type"),  # type: ignore[reportAttributeAccessIssue]
+                attributes=result.get("attributes"),  # type: ignore[reportAttributeAccessIssue]
+                relationships=NoteRelationships(
+                    *utils.format_relationships(result.get("relationships")),  # type: ignore[reportAttributeAccessIssue]
+                ),
+            ),
+            http=self,
+        )

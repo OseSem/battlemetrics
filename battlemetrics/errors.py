@@ -5,31 +5,14 @@ from requests import Response
 
 _ResponseType = ClientResponse | Response
 
+__all__ = ("BMException", "HTTPException", "Unauthorized", "Forbidden", "NotFound")
+
 
 class BMException(Exception):
     """Base exception class for all errors.
 
     This is used so we can catch any error without catching the BLE001 ruff rule.
     """
-
-
-# Thanks to https://github.com/DisnakeDev/disnake ❤️
-def _flatten_error_dict(d: dict[str, Any], key: str = "") -> dict[str, str]:
-    items: list[tuple[str, str]] = []
-    for k, v in d.items():
-        new_key = f"{key}.{k}" if key else k
-
-        if isinstance(v, dict):
-            try:
-                _errors: list[dict[str, Any]] = v["_errors"]
-            except KeyError:
-                items.extend(_flatten_error_dict(v, new_key).items())
-            else:
-                items.append((new_key, " ".join(x.get("message", "") for x in _errors)))
-        else:
-            items.append((new_key, v))
-
-    return dict(items)
 
 
 class HTTPException(BMException):
@@ -67,3 +50,15 @@ class HTTPException(BMException):
             fmt += ": {2}"
 
         super().__init__(fmt.format(self.response, self.code, self.text))
+
+
+class Unauthorized(HTTPException):
+    """Exception that's raised for when status code 401 occurs."""
+
+
+class Forbidden(HTTPException):
+    """Exception that's raised for when status code 403 occurs."""
+
+
+class NotFound(HTTPException):
+    """Exception that's raised for when status code 404 occurs."""
