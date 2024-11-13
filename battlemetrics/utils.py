@@ -17,7 +17,7 @@ def remove_html_tags(text: str) -> str:
     return re.compile(r"<[^>]+>").sub("", text)
 
 
-def format_relationships(data: dict[str, Any]) -> dict[str, int]:
+def format_relationships(data: dict[str, Any]) -> dict[str, int | str]:
     """Format the relationships data."""
     if not data:
         msg = "No relationships found."
@@ -27,6 +27,10 @@ def format_relationships(data: dict[str, Any]) -> dict[str, int]:
     if data:
         for key, value in data.items():
             name = f"{key}_id"
-            new_data[name] = int(value.get("data").get("id"))
+            new_data[name] = (
+                int(value.get("data").get("id"))
+                if isinstance(value.get("data").get("id"), int)
+                else value.get("data").get("id")
+            )
 
     return new_data
