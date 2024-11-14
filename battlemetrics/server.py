@@ -3,8 +3,6 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-import rich
-
 from .types.server import Server as ServerPayload
 from .types.server import ServerAttributes, ServerRelationships
 
@@ -21,7 +19,6 @@ class Server:
 
     def __init__(self, data: ServerPayload, *, http: HTTPClient) -> None:
         self._http = http
-        rich.print(data)
         self._data: ServerPayload = ServerPayload(**data)
         self._attributes: ServerAttributes = data.get("attributes")
         self._relationships: ServerRelationships | None = data.get("relationships")
