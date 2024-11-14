@@ -23,7 +23,7 @@ def format_relationships(data: dict[str, Any]) -> dict[str, int | str]:
         msg = "No relationships found."
         raise ValueError(msg)
 
-    new_data = {}
+    new_data: dict[str, str | int] = {}
     if data:
         for key, value in data.items():
             name = f"{key}_id"

@@ -1,4 +1,4 @@
-from typing import Literal, NamedTuple, TypedDict
+from typing import Any, Literal, NamedTuple, TypedDict
 from uuid import UUID
 
 
@@ -8,7 +8,7 @@ class ServerAttributes(TypedDict):
     address: str
     country: str  # TODO: Add country enum
     createdAt: str
-    details: str
+    details: dict[str, Any]
     id: int
     ip: str
     location: tuple[float, float]

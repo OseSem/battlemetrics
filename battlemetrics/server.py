@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
+import rich
+
 from .types.server import Server as ServerPayload
 from .types.server import ServerAttributes, ServerRelationships
 
@@ -19,14 +21,14 @@ class Server:
 
     def __init__(self, data: ServerPayload, *, http: HTTPClient) -> None:
         self._http = http
-
+        rich.print(data)
         self._data: ServerPayload = ServerPayload(**data)
         self._attributes: ServerAttributes = data.get("attributes")
         self._relationships: ServerRelationships | None = data.get("relationships")
 
-    #     def __str__(self) -> str:
-    #         """Return when the string method is ran on this Note."""
-    #         return self.name
+    def __str__(self) -> str:
+        """Return when the string method is run on this Server."""
+        return self.name
 
     @property
     def id(self) -> int:
@@ -69,12 +71,12 @@ class Server:
         return self._attributes.get("rank")
 
     @property
-    def location(self) -> tuple[float, float]:
+    def location(self) -> tuple[float, ...]:
         """Return the location of the server."""
         return tuple(self._attributes.get("location"))
 
     @property
-    def status(self) -> Literal["offline", "online", "dead", "invalid", "unknown"]:
+    def status(self) -> Literal["offline", "online", "dead", "removed", "invalid"]:
         """Return the status of the server."""
         return self._attributes.get("status")
 
@@ -117,7 +119,7 @@ class Server:
         self,
         start_time: str | datetime | None = None,
         end_time: str | datetime | None = None,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Return the history of where your server is ranked.
 
         Parameters
@@ -137,7 +139,7 @@ class Server:
         self,
         start_time: str | datetime | None = None,
         end_time: str | datetime | None = None,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Return the servers time played history.
 
         Parameters
@@ -157,7 +159,7 @@ class Server:
         self,
         start_time: str | datetime | None = None,
         end_time: str | datetime | None = None,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """First Time Player History.
 
         Parameters
@@ -176,7 +178,7 @@ class Server:
         self,
         start_time: str | datetime | None = None,
         end_time: str | datetime | None = None,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Return the unique players history on the server.
 
         Parameters
@@ -196,7 +198,7 @@ class Server:
         start_time: str | datetime | None = None,
         end_time: str | datetime | None = None,
         resolution: str = "raw",
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Return the player count history.
 
         Parameters
@@ -221,7 +223,7 @@ class Server:
         self,
         start_time: str | datetime | None = None,
         end_time: str | datetime | None = None,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Return the session history of the server.
 
         Parameters
@@ -241,7 +243,7 @@ class Server:
         uptime: str = "90",
         start_time: str | datetime | None = None,
         end_time: str | datetime | None = None,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Outage History.
 
         Outages are periods of time that the server did not respond to queries.
@@ -265,7 +267,7 @@ class Server:
         resolution: str = "60",
         start_time: str | datetime | None = None,
         end_time: str | datetime | None = None,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Downtime History.
 
         Value is number of seconds the server was offline during that period.
@@ -284,7 +286,7 @@ class Server:
         """
         return await self._http.server_downtime_history(self.id, resolution, start_time, end_time)
 
-    async def server_force_update(self) -> dict:
+    async def server_force_update(self) -> dict[str, Any]:
         """Force Update will cause us to immediately queue the server to be queried and updated.
 
         This is limited to subscribers and users who belong to the organization
@@ -304,7 +306,7 @@ class Server:
         """
         return await self._http.server_force_update(self.id)
 
-    async def send_chat(self, message: str, sender_name: str) -> dict:
+    async def send_chat(self, message: str, sender_name: str) -> dict[str, Any]:
         """Send a message on the server.
 
         Parameters
@@ -317,9 +319,9 @@ class Server:
         -------
             dict: If it was successful or not.
         """
-        return await self._http.send_chat(message, sender_name)
+        return await self._http.send_chat(self.id, message, sender_name)
 
-    async def console_command(self, server_id: int, command: str) -> dict:
+    async def console_command(self, server_id: int, command: str) -> dict[str, Any]:
         """Send a raw server console command.
 
         Parameters
@@ -337,14 +339,14 @@ class Server:
         """Enable RCON for the server."""
         raise NotImplementedError
 
-    async def delete_rcon(self) -> dict:
+    async def delete_rcon(self) -> dict[str, Any]:
         """Delete the RCON for the server."""
         return await self._http.delete_rcon(self.id)
 
-    async def disconnect_rcon(self) -> dict:
+    async def disconnect_rcon(self) -> dict[str, Any]:
         """Disconnect the RCON for the server."""
         return await self._http.disconnect_rcon(self.id)
 
-    async def connect_rcon(self) -> dict:
+    async def connect_rcon(self) -> dict[str, Any]:
         """Connect the RCON for the server."""
         return await self._http.connect_rcon(self.id)

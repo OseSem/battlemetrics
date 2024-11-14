@@ -41,6 +41,12 @@ lint = { cmd = "pre-commit run --all-files", help = "Check all files for linting
 precommit = { cmd = "pre-commit install --install-hooks", help = "Install the precommit hook" }
 pyright = { cmd = "dotenv -f task.env run -- python -m pyright", help = "Run pyright" }
 
+[tool.pyright]
+typeCheckingMode = "strict"
+
+reportReturnType = false
+reportUnnecessaryComparison = false
+
 [tool.black]
 line-length = 100
 target-version = ["py310", "py311", "py312"]
@@ -74,3 +80,6 @@ lint.ignore = [
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
+
+[tool.ruff.lint.pylint]
+max-args = 6

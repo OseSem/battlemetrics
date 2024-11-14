@@ -24,7 +24,7 @@ class Note:
         self._relationships: NoteRelationships | None = data.get("relationships")
 
     def __str__(self) -> str:
-        """Return when the string method is ran on this Note."""
+        """Return when the string method is run on this Note."""
         return self.content
 
     def __repr__(self) -> str:

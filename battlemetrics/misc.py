@@ -1,4 +1,4 @@
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 __all__ = (
     "APIScopes",
@@ -31,6 +31,6 @@ class Metrics(NamedTuple):
 class ActivityLogs(NamedTuple):
     """All types for the function activity_logs."""
 
-    data: list
-    included: list
-    links: dict
+    data: list[Any]
+    included: list[Any]
+    links: dict[str, Any]

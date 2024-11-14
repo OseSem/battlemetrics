@@ -8,10 +8,12 @@ from battlemetrics.misc import ActivityLogs, APIScopes, Metrics
 
 if TYPE_CHECKING:
     from asyncio import AbstractEventLoop
+    from typing import Any
 
     from aiohttp import BaseConnector
 
-    from battlemetrics.note import Note
+    from .note import Note
+    from .server import Server
 
 __all__ = ("Battlemetrics",)
 
@@ -54,12 +56,22 @@ class Battlemetrics:
         """
         return await self.http.get_note(player_id, note_id)
 
+    async def get_server(self, server_id: int) -> Server:
+        """Return a note based on Server ID.
+
+        Parameters
+        ----------
+            server_id (int):
+                The ID of the Server.
+        """
+        return await self.http.get_server(server_id)
+
     async def check_api_scopes(self, token: str | None = None) -> APIScopes:
         """Retrieve the token scopes from the oauth.
 
         Parameters
         ----------
-            api_key (str | None):
+            token (str | None):
                 Your given API token. Defaults to the one supplied to this battlemetrics class.
 
         Returns
@@ -72,30 +84,20 @@ class Battlemetrics:
         json_dict = {
             "token": token,
         }
-        data = await self.http.request(
-            Route(
-                method="POST",
-                url=url,
-            ),
-            json=json_dict,
+        data: dict[str, Any] = (
+            await self.http.request(
+                Route(
+                    method="POST",
+                    url=url,
+                ),
+                json=json_dict,
+            )
+            or {}
         )
 
-        if data is None or "data" not in data:
-            msg = "Invalid response from the API"
-            raise ValueError(msg)
+        data = data.get("data", {})
 
-        data = data.get("data") if isinstance(data, dict) else None
-
-        if data is None:
-            msg = "Invalid data structure in the API response"
-            raise ValueError(msg)
-
-        return APIScopes(
-            active=data.get("active"),
-            scopes=data.get("scope", "").split(":"),
-            client_id=data.get("client_Id"),
-            token_type=data.get("type"),
-        )
+        return APIScopes(**data)
 
     async def metrics(
         self,
@@ -141,15 +143,8 @@ class Battlemetrics:
             ),
             params=params,
         )
-        data = data if isinstance(data, dict) else {}
-        return [
-            Metrics(
-                type=x.get("type"),
-                timestamp=x["attributes"].get("timestamp"),
-                value=x["attributes"].get("value"),
-            )
-            for x in data["data"]
-        ]
+
+        return [Metrics(**x) for x in data["data"]]
 
     async def activity_logs(
         self,
@@ -196,4 +191,4 @@ class Battlemetrics:
             ),
             params=params,
         )
-        return ActivityLogs(**data)  # type: ignore [reportCallIssue]
+        return ActivityLogs(**data)

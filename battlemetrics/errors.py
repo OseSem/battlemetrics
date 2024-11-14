@@ -1,9 +1,6 @@
 from typing import Any
 
 from aiohttp import ClientResponse
-from requests import Response
-
-_ResponseType = ClientResponse | Response
 
 __all__ = ("BMException", "HTTPException", "Unauthorized", "Forbidden", "NotFound")
 
@@ -11,7 +8,7 @@ __all__ = ("BMException", "HTTPException", "Unauthorized", "Forbidden", "NotFoun
 class BMException(Exception):
     """Base exception class for all errors.
 
-    This is used so we can catch any error without catching the BLE001 ruff rule.
+    This is used, so we can catch any error without catching the BLE001 ruff rule.
     """
 
 
@@ -33,8 +30,8 @@ class HTTPException(BMException):
         The Discord specific error code for the failure.
     """
 
-    def __init__(self, response: _ResponseType, message: str | dict[str, Any] | None) -> None:
-        self.response: _ResponseType = response
+    def __init__(self, response: ClientResponse, message: str | dict[str, Any] | None) -> None:
+        self.response: ClientResponse = response
         self.status: int = response.status  # type: ignore[reportAccessAttributeIssue]
         self.code: int
         self.text: str

@@ -3,23 +3,21 @@ from __future__ import annotations
 import asyncio
 from datetime import UTC, datetime, timedelta
 from logging import getLogger
-from typing import TYPE_CHECKING, Any, ClassVar, List, Literal
+from typing import (  # noqa: UP035
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Coroutine,
+    Literal,
+    TypeVar,
+)
 
 import aiohttp
 import yarl
 
-from . import utils
 from .errors import BMException, Forbidden, HTTPException, NotFound, Unauthorized
 from .note import Note
 from .server import Server
-from .types.note import Note as NotePayload
-from .types.note import NoteAttributes, NoteRelationships
-from .types.server import (
-    Server as ServerPayload,
-)
-from .types.server import (
-    ServerSearch,
-)
 
 if TYPE_CHECKING:
     from asyncio import AbstractEventLoop
@@ -27,7 +25,14 @@ if TYPE_CHECKING:
     from aiohttp import BaseConnector, ClientResponse, ClientSession
     from yarl import URL
 
+    from .types.note import NoteAttributes
+    from .types.server import ServerSearch
+
+    T = TypeVar("T")
+    Response = Coroutine[Any, Any, T]
+
 _log = getLogger(__name__)
+
 
 SUCCESS_STATUS = [200, 201, 204]
 
@@ -158,7 +163,7 @@ class HTTPClient:
         route: Route,
         headers: dict[str, str] | None = None,
         **kwargs: Any,  # noqa: ANN401
-    ) -> dict[str, Any] | list[dict[str, Any]] | str:
+    ) -> Any:  # noqa: ANN401
         """
         Send a request to the specified route and returns the response.
 
@@ -230,7 +235,10 @@ class HTTPClient:
                     )
                     raise NotFound(response, data)
                 if response.status == 429:
-                    _log.warning("We're being rate limited.")
+                    _log.warning(
+                        "We're being rate limited. You are limited to %s requests per minute.",
+                        response.headers.get("X-Rate-Limit-Limit"),
+                    )
 
                 raise HTTPException(response, data)
 
@@ -253,20 +261,9 @@ class HTTPClient:
                 path=url,
             ),
         )
-        if isinstance(data, dict):
-            data = data.get("data")
 
         return Note(
-            data=NotePayload(
-                id=data.get("id"),  # type: ignore[reportAttributeAccessIssue]
-                type=data.get("type"),  # type: ignore[reportAttributeAccessIssue]
-                attributes=NoteAttributes(
-                    **data.get("attributes", {}),  # type: ignore[reportAttributeAccessIssue]
-                ),
-                relationships=NoteRelationships(
-                    **utils.format_relationships(data.get("relationships", {})),  # type: ignore[reportAttributeAccessIssue]
-                ),
-            ),
+            data=data.get("data"),
             http=self,
         )
 
@@ -314,14 +311,14 @@ class HTTPClient:
             dict: Response from server.
         """
         if existing := await self.get_note(player_id=player_id, note_id=note_id):
-            existing_content = existing.content
+            existing_content: str = str(existing)
         else:
-            msg = "Note does not exist."
-            raise ValueError(msg)
+            fmt = "Note does not exist."
+            raise ValueError(fmt)
 
         url = f"/players/{player_id}/relationships/notes/{note_id}"
 
-        content = (
+        content: str = (
             f"{existing_content}\n{attributes.get("note")}" if append else attributes.get("note")
         )
 
@@ -345,14 +342,7 @@ class HTTPClient:
             json_dict=data,
         )
         return Note(
-            data=NotePayload(
-                id=result.get("id"),  # type: ignore[reportAttributeAccessIssue]
-                type=result.get("type"),  # type: ignore[reportAttributeAccessIssue]
-                attributes=result.get("attributes"),  # type: ignore[reportAttributeAccessIssue]
-                relationships=NoteRelationships(
-                    *utils.format_relationships(result.get("relationships")),  # type: ignore[reportAttributeAccessIssue]
-                ),
-            ),
+            data=result.get("data"),
             http=self,
         )
 
@@ -368,20 +358,15 @@ class HTTPClient:
             dict: The server information.
         """
         data = {
-            "include": "player,identifier,session,serverEvent,uptime:7,uptime:30,uptime:90,serverGroup,serverDescription,organization,orgDescription,orgGroupDescription",
+            "include": (
+                "player,identifier,session,serverEvent,uptime:7,uptime:30,uptime:90,"
+                "serverGroup,serverDescription,organization,orgDescription,orgGroupDescription"
+            ),
         }
 
         request = await self.request(Route(method="GET", path=f"/servers/{server_id}"), params=data)
-        if isinstance(request, dict):
-            request = request.get("data")
-
         return Server(
-            ServerPayload(
-                id=request.get("id"),
-                type=request.get("type"),
-                attributes=request.get("attributes"),
-                relationships=utils.format_relationships(request.get("relationships")),
-            ),
+            request.get("data"),
             http=self,
         )
 
@@ -441,31 +426,23 @@ class HTTPClient:
             ),
             params=data,
         )
-        if isinstance(request, dict):
-            request = request.get("data")
+        request = request.get("data")
+
+        if len(request) == 0:
+            fmt = "No servers found."
+            raise ValueError(fmt)
 
         if len(request) > 1:
             return [
                 Server(
-                    data=ServerPayload(
-                        id=x.get("id"),
-                        type=x.get("type"),
-                        attributes=x.get("attributes"),
-                        relationships=utils.format_relationships(x.get("relationships")),
-                    ),
+                    data=x,
                     http=self,
                 )
                 for x in request
             ]
-        request = request[0]
 
         return Server(
-            ServerPayload(
-                id=request.get("id"),
-                type=request.get("type"),
-                attributes=request.get("attributes"),
-                relationships=utils.format_relationships(request.get("relationships")),
-            ),
+            data=request,
             http=self,
         )
 
@@ -474,7 +451,7 @@ class HTTPClient:
         server_id: int,
         start_time: str | datetime | None = None,
         end_time: str | datetime | None = None,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Return the history of where your server is ranked."""
         if not start_time:
             now = datetime.now(tz=UTC)
@@ -505,7 +482,7 @@ class HTTPClient:
         server_id: int,
         start_time: str | datetime | None = None,
         end_time: str | datetime | None = None,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Return the servers time played history."""
         if not start_time:
             now = datetime.now(tz=UTC)
@@ -536,7 +513,7 @@ class HTTPClient:
         server_id: int,
         start_time: str | datetime | None = None,
         end_time: str | datetime | None = None,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """First Time Player History."""
         if not start_time:
             now = datetime.now(tz=UTC)
@@ -567,7 +544,7 @@ class HTTPClient:
         server_id: int,
         start_time: str | datetime | None = None,
         end_time: str | datetime | None = None,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Return the unique players history on a server."""
         if not start_time:
             now = datetime.now(tz=UTC)
@@ -599,7 +576,7 @@ class HTTPClient:
         start_time: str | datetime | None = None,
         end_time: str | datetime | None = None,
         resolution: str = "raw",
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Return the player count history.
 
         Parameters
@@ -643,7 +620,7 @@ class HTTPClient:
         server_id: int,
         start_time: str | datetime | None = None,
         end_time: str | datetime | None = None,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Return the session history of a server."""
         if not start_time:
             now = datetime.now(tz=UTC)
@@ -676,7 +653,7 @@ class HTTPClient:
         uptime: str = "90",
         start_time: str | datetime | None = None,
         end_time: str | datetime | None = None,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Outage History.
 
         Outages are periods of time that the server did not respond to queries.
@@ -710,7 +687,7 @@ class HTTPClient:
         resolution: str = "60",
         start_time: str | datetime | None = None,
         end_time: str | datetime | None = None,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Downtime History."""
         if not start_time:
             now = datetime.now(tz=UTC)
@@ -737,7 +714,7 @@ class HTTPClient:
             params=data,
         )
 
-    async def server_force_update(self, server_id: int) -> dict:
+    async def server_force_update(self, server_id: int) -> dict[str, Any]:
         """Force Update will cause us to immediately queue the server to be queried and updated.
 
         This is limited to subscribers and users who belong to the organization
@@ -748,7 +725,12 @@ class HTTPClient:
         """
         return await self.request(Route(method="POST", path=f"/servers/{server_id}/force-update"))
 
-    async def send_chat(self, message: str, sender_name: str) -> dict:
+    async def send_chat(
+        self,
+        server_id: int,
+        message: str,
+        sender_name: str,
+    ) -> dict[str, Any]:
         """Send a message on the server.
 
         Parameters
@@ -772,12 +754,16 @@ class HTTPClient:
                 },
             },
         }
-        return await self._http.request(
-            Route(method="POST", path=f"/servers/{self.id}/relationships/leaderboards/time"),
+        return await self.request(
+            Route(method="POST", path=f"/servers/{server_id}/relationships/leaderboards/time"),
             json=chat,
         )
 
-    async def console_command(self, server_id: int, command: str) -> dict:
+    async def console_command(
+        self,
+        server_id: int,
+        command: str,
+    ) -> dict[str, Any]:
         """Send a raw server console command.
 
         Parameters
@@ -805,7 +791,7 @@ class HTTPClient:
             json=data,
         )
 
-    async def delete_rcon(self, server_id: int) -> dict:
+    async def delete_rcon(self, server_id: int) -> dict[str, Any]:
         """Delete the RCON for your server.
 
         Parameters
@@ -818,7 +804,7 @@ class HTTPClient:
         """
         return await self.request(Route(method="DELETE", path=f"/servers/{server_id}/rcon"))
 
-    async def disconnect_rcon(self, server_id: int) -> dict:
+    async def disconnect_rcon(self, server_id: int) -> dict[str, Any]:
         """Disconnect RCON from your server.
 
         Parameters
@@ -831,7 +817,7 @@ class HTTPClient:
             Route(method="DELETE", path=f"/servers/{server_id}/rcon/disconnect"),
         )
 
-    async def connect_rcon(self, server_id: int) -> dict:
+    async def connect_rcon(self, server_id: int) -> dict[str, Any]:
         """Connect RCON to your server.
 
         Parameters
@@ -842,9 +828,11 @@ class HTTPClient:
         -------
             dict: Response from the server.
         """
-        return await self.request(method="DELETE", path=f"/servers/{server_id}/rcon/connect")
+        return await self.request(
+            Route(method="DELETE", path=f"/servers/{server_id}/rcon/connect"),
+        )
 
-    async def server_info(self, server_id: int) -> dict:
+    async def server_info(self, server_id: int) -> dict[str, Any] | None:
         """Return information about a server.
 
         Parameters
