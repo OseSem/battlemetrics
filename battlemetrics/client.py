@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from aiohttp import BaseConnector
 
     from .note import Note
+    from .organization import Organization
     from .server import Server
 
 __all__ = ("Battlemetrics",)
@@ -65,6 +66,16 @@ class Battlemetrics:
                 The ID of the Server.
         """
         return await self.http.get_server(server_id)
+
+    async def get_organization(self, organization_id: int) -> Organization:
+        """Return a note based on Organization ID.
+
+        Parameters
+        ----------
+            organization_id (int):
+                The ID of the Organization.
+        """
+        return await self.http.get_organization(organization_id)
 
     async def check_api_scopes(self, token: str | None = None) -> APIScopes:
         """Retrieve the token scopes from the oauth.

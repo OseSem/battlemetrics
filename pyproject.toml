@@ -77,6 +77,9 @@ lint.ignore = [
 "battlemetrics/http.py" = [
     "PLR2004", # Constant variable
 ]
+"battlemetrics/types/*.py" = [
+    "N815", # Lowercase variable
+]
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"

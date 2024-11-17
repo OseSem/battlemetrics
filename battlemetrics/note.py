@@ -21,7 +21,11 @@ class Note:
 
         self._data: NotePayload = NotePayload(**data)
         self._attributes: NoteAttributes = data.get("attributes")
-        self._relationships: NoteRelationships | None = data.get("relationships")
+        self._relationships: NoteRelationships = (
+            utils.format_relationships(  # type: ignore [reportAttributeAccessIssue]
+                data.get("relationships"),
+            )
+        )
 
     def __str__(self) -> str:
         """Return when the string method is run on this Note."""

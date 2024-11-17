@@ -17,7 +17,9 @@ import yarl
 
 from .errors import BMException, Forbidden, HTTPException, NotFound, Unauthorized
 from .note import Note
+from .organization import Organization
 from .server import Server
+from .types.organization import OrganizationPlayerStats
 
 if TYPE_CHECKING:
     from asyncio import AbstractEventLoop
@@ -850,3 +852,98 @@ class HTTPClient:
             ),
         }
         return await self.request(Route(method="GET", path=f"/servers/{server_id}"), params=data)
+
+    async def get_organization(self, organization_id: int) -> Organization:
+        """Return information about an organization.
+
+        Parameters
+        ----------
+            organization_id (int): The organization ID
+
+        Returns
+        -------
+            dict: The organization information.
+        """
+        data = await self.request(Route(method="GET", path=f"/organizations/{organization_id}"))
+        return Organization(data=data.get("data"), http=self)
+
+    async def organization_player_stats(
+        self,
+        organization_id: int,
+        start_time: str | datetime | None = None,
+        end_time: str | datetime | None = None,
+        game: str | None = None,
+    ) -> OrganizationPlayerStats:
+        """Get a players stats for the organization.
+
+        Parameters
+        ----------
+            organization_id (int): Organization ID
+            start (str): UTC start time. Defaults to 7 days ago.
+            end (str): UTC end time. Defaults to today.
+            game (str, optional): Targeted game, example: rust. Defaults to None.
+
+        Returns
+        -------
+            dict: Player stats for the organization.
+        """
+        if not start_time:
+            now = datetime.now(tz=UTC)
+            start_time = now - timedelta(days=0)
+            start_time = start_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+        if not end_time:
+            end_time = datetime.now(tz=UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        start = (
+            start_time if isinstance(start_time, str) else start_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+        )
+        end = end_time if isinstance(end_time, str) else end_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        data = {
+            "filter[range]": f"{start}:{end}",
+        }
+        if game:
+            data["filter[game]"] = game
+
+        r = await self.request(
+            Route(method="GET", path=f"/organizations/{organization_id}/stats/players"),
+            params=data,
+        )
+        return OrganizationPlayerStats(**r.get("data").get("attributes"))
+
+    async def organization_friends_list(
+        self,
+        organization_id: int,
+        *,
+        filter_name: str | None = None,
+        filter_accepted: bool = True,
+        filter_origin: bool = True,
+        filter_reciprocated: bool = True,
+    ) -> dict[str, Any]:
+        """Get all the organization friends.
+
+        Parameters
+        ----------
+            organization_id (str): Your organization ID
+            filter_accepted (bool, optional): Whether they have accepted.
+            filter_origin (bool, optional): True or False. Defaults to True.
+            filter_name (str, optional): Name of a specific organization. Defaults to None.
+            filter_reciprocated (bool, optional): True or False. Are the feelings mutual?
+
+        Returns
+        -------
+            dict: Returns all the friendship information based on the paramaters set.
+        """
+        data = {
+            "include": "organization",
+            "filter[accepted]": str(filter_accepted).lower(),
+            "filter[origin]": str(filter_origin).lower(),
+            "filter[reciprocated]": str(filter_reciprocated).lower(),
+        }
+        if filter_name:
+            data["filter[name]"] = filter_name
+
+        return await self.request(
+            Route(method="GET", path=f"/organizations/{organization_id}/relationships/friends"),
+            params=data,
+        )

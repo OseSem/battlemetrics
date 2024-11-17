@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
+from . import utils
 from .types.server import Server as ServerPayload
 from .types.server import ServerAttributes, ServerRelationships
 
@@ -21,7 +22,11 @@ class Server:
         self._http = http
         self._data: ServerPayload = ServerPayload(**data)
         self._attributes: ServerAttributes = data.get("attributes")
-        self._relationships: ServerRelationships | None = data.get("relationships")
+        self._relationships: ServerRelationships = (
+            utils.format_relationships(  # type: ignore [reportAttributeAccessIssue]
+                data.get("relationships"),
+            )
+        )
 
     def __str__(self) -> str:
         """Return when the string method is run on this Server."""
