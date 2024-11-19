@@ -53,7 +53,7 @@ async def main() -> None:
 
     # Get the player
     player = await bm.get_player(123456)
-    
+
     # Return the players name
     print(player.name)
 
