@@ -1,23 +1,19 @@
 from __future__ import annotations
 
 import asyncio
+import uuid
 from datetime import UTC, datetime, timedelta
 from logging import getLogger
-from typing import (  # noqa: UP035
-    TYPE_CHECKING,
-    Any,
-    ClassVar,
-    Coroutine,
-    Literal,
-    TypeVar,
-)
+from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 import aiohttp
 import yarl
 
+from . import utils
 from .errors import BMException, Forbidden, HTTPException, NotFound, Unauthorized
 from .note import Note
 from .organization import Organization
+from .player import Player
 from .server import Server
 from .types.organization import OrganizationPlayerStats
 
@@ -28,15 +24,28 @@ if TYPE_CHECKING:
     from yarl import URL
 
     from .types.note import NoteAttributes
-    from .types.server import ServerSearch
 
-    T = TypeVar("T")
-    Response = Coroutine[Any, Any, T]
 
 _log = getLogger(__name__)
 
 
 SUCCESS_STATUS = [200, 201, 204]
+IDENTIFIERS = Literal[
+    "steamID",
+    "BEGUID",
+    "legacyBEGUID",
+    "ip",
+    "name",
+    "survivorName",
+    "steamFamilyShareOwner",
+    "conanCharName",
+    "egsID",
+    "funcomID",
+    "playFabID",
+    "mcUUID",
+    "7dtdEOS",
+    "battlebitHWID",
+]
 
 
 async def json_or_text(
@@ -164,8 +173,8 @@ class HTTPClient:
         self,
         route: Route,
         headers: dict[str, str] | None = None,
-        **kwargs: Any,  # noqa: ANN401
-    ) -> Any:  # noqa: ANN401
+        **kwargs: Any,
+    ) -> Any:
         """
         Send a request to the specified route and returns the response.
 
@@ -374,14 +383,50 @@ class HTTPClient:
 
     async def search_server(
         self,
-        search: ServerSearch,
+        search: str | None = None,
+        *,
+        countries: list[str] | None = None,  # TODO: Add countries type
+        game: str | None = None,
+        blacklist: list[str] | None = None,
+        whitelist: list[str] | None = None,
+        organization: str | None = None,
+        gather_rate_min: int = 1,
+        gather_rate_max: int = 20,
+        group_size_min: int | None = 1,
+        group_size_max: int | None = 16,
+        map_size_min: int | None = 1,
+        map_size_max: int | None = 6000,
+        blueprints: bool | Literal["both"] = "both",
+        pve: bool | Literal["both"] = "both",
+        kits: bool | Literal["both"] = "both",
+        status: Literal["offline", "online", "dead", "invalid", "unknown"] = "online",
+        page_size: int = 100,
+        sort_rank: bool = True,
+        rcon: bool = True,
     ) -> list[Server] | Server:
         """Search for a server.
 
         Parameters
         ----------
-        search : ServerSearch
-            The search parameters to use.
+        search (str, optional): The search query. Defaults to None.
+        countries (list[str], optional): The countries to search for. Defaults to None.
+        game (str, optional): The game to search for. Defaults to None.
+        blacklist (list[str], optional): The blacklist to search for. Defaults to None.
+        whitelist (list[str], optional): The whitelist to search for. Defaults to None.
+        organization (str, optional): The organization to search for. Defaults to None.
+        gather_rate_min (int, optional): The minimum gather rate. Defaults to 1.
+        gather_rate_max (int, optional): The maximum gather rate. Defaults to 20.
+        group_size_min (int, optional): The minimum group size. Defaults to 1.
+        group_size_max (int, optional): The maximum group size. Defaults to 16.
+        map_size_min (int, optional): The minimum map size. Defaults to 1.
+        map_size_max (int, optional): The maximum map size. Defaults to 6000.
+        blueprints (bool, optional): Whether blueprints are enabled. Defaults to "both".
+        pve (bool, optional): Whether PVE is enabled. Defaults to "both".
+        kits (bool, optional): Whether kits are enabled. Defaults to "both".
+        status (str, optional): The status of the server. Defaults to "online".
+        page_size (int, optional): The page size. Defaults to 100.
+        sort_rank (bool, optional): Whether to sort by rank. Defaults to True.
+        rcon (bool, optional): Whether RCON is enabled. Defaults to True.
         """
         blueprints_uuid = "ce84a17d-a52b-11ee-a465-1798067d9f03"  # Boolean
         pve_uuid = "689d22c2-66f4-11ea-8764-e7fb71d2bf20"  # boolean
@@ -392,34 +437,31 @@ class HTTPClient:
         gatherrate_uuid = "ce84a17f-a52b-11ee-a465-33d2d6d4f5ea"  # 1:255
 
         data = {}
-        data["page[size]"] = search.page_size
+        data["page[size]"] = page_size
         data["include"] = "serverGroup"
-        data["filter[rcon]"] = str(search.rcon).lower()
-        data["sort"] = "rank" if search.sort_rank else "-rank"
-        data["filter[search]"] = search.search
-        data["filter[game]"] = search.game if search.game else "rust"
-        data[f"filter[features][{grouplimit_uuid}]"] = (
-            f"{search.group_size_min}:{search.group_size_max}"
-        )
-        data[f"filter[features][{mapsize_uuid}]"] = f"{search.map_size_min}:{search.map_size_max}"
-        data[f"filter[features][{gatherrate_uuid}]"] = (
-            f"{search.gather_rate_min}:{search.gather_rate_max}"
-        )
+        data["filter[rcon]"] = str(rcon).lower()
+        data["sort"] = "rank" if sort_rank else "-rank"
+        data["filter[search]"] = search
+        data["filter[game]"] = game if game else "rust"
+        data["filter[status]"] = status
+        data[f"filter[features][{grouplimit_uuid}]"] = f"{group_size_min}:{group_size_max}"
+        data[f"filter[features][{mapsize_uuid}]"] = f"{map_size_min}:{map_size_max}"
+        data[f"filter[features][{gatherrate_uuid}]"] = f"{gather_rate_min}:{gather_rate_max}"
 
-        if search.countries:
-            data["filter[countries][or][0]"] = search.countries
-        if search.blacklist:
-            data["filter[ids][blacklist]"] = search.blacklist
-        if search.whitelist:
-            data["filter[ids][whitelist]"] = search.whitelist
-        if search.organization:
-            data["filter[organizations]"] = search.organization
-        if isinstance(search.pve, bool):
-            data[f"filter[features][{pve_uuid}]"] = str(search.pve).lower()
-        if isinstance(search.kits, bool):
-            data[f"filter[features][{kits_uuid}]"] = str(search.kits).lower()
-        if isinstance(search.blueprints, bool):
-            data[f"filter[features][{blueprints_uuid}]"] = str(search.blueprints).lower()
+        if countries:
+            data["filter[countries][or][0]"] = countries
+        if blacklist:
+            data["filter[ids][blacklist]"] = blacklist
+        if whitelist:
+            data["filter[ids][whitelist]"] = whitelist
+        if organization:
+            data["filter[organizations]"] = organization
+        if isinstance(pve, bool):
+            data[f"filter[features][{pve_uuid}]"] = str(pve).lower()
+        if isinstance(kits, bool):
+            data[f"filter[features][{kits_uuid}]"] = str(kits).lower()
+        if isinstance(blueprints, bool):
+            data[f"filter[features][{blueprints_uuid}]"] = str(blueprints).lower()
 
         request = await self.request(
             Route(
@@ -946,4 +988,522 @@ class HTTPClient:
         return await self.request(
             Route(method="GET", path=f"/organizations/{organization_id}/relationships/friends"),
             params=data,
+        )
+
+    async def match_identifiers(
+        self,
+        identifier: str | int,
+        identifier_type: IDENTIFIERS | None = None,
+    ) -> dict[str, Any]:
+        """Search for one or more identifiers.
+
+        This API method is only available to authenticated users.
+
+        It is rate limited to one request a second.
+
+        Parameters
+        ----------
+            identifier (str): The specific identifier.
+            type (str, optional): The type of identifier you provided.
+
+        Returns
+        -------
+            dict: Dictionary response of any matches.
+        """
+        data = {
+            "data": [
+                {
+                    "type": "identifier",
+                    "attributes": {
+                        "type": identifier_type,
+                        "identifier": f"{identifier}",
+                    },
+                },
+            ],
+        }
+        params = {"include": "player,server,identifier,playerFlag,flagPlayer"}
+        return await self.request(
+            Route(method="POST", path="/players/match"),
+            json=data,
+            params=params,
+        )
+
+    async def quick_match(
+        self,
+        identifier: str,
+        identifier_type: IDENTIFIERS | None = None,
+    ) -> dict[str, Any]:
+        """Player Quick Match Identifiers.
+
+        Searches for one or more identifiers.
+        This API method is only available to authenticated users.
+        It is also rate limited to 10 requests per second.
+        Enterprise users have a higher rate limit of 30 requests per second.
+        The servers filter limits which servers you get when including server information
+        it does not filter players by server.
+
+        Results will be returned sorted by the player's id.
+
+        Parameters
+        ----------
+            identifier (str): The specific identifier.
+            type (str, optional): The type of identifier you provided.
+
+        Returns
+        -------
+            dict: Dictionary response of any matches.
+        """
+        data = {
+            "data": [
+                {
+                    "type": "identifier",
+                    "attributes": {
+                        "type": identifier_type,
+                        "identifier": f"{identifier}",
+                    },
+                },
+            ],
+        }
+        return await self.request(
+            Route(method="POST", path="/players/quick-match"),
+            json=data,
+        )
+
+    async def player_identifiers(self, player_id: int) -> dict[str, Any]:
+        """Get player identifiers and related players and identifiers.
+
+        Parameters
+        ----------
+            player_id (int): The player battlemetrics Identifier.
+
+        Returns
+        -------
+            dict: Players related identifiers.
+        """
+        data = {
+            "include": "player,identifier",
+            "page[size]": "100",
+        }
+        return await self.request(
+            Route(method="GET", path=f"/players/{player_id}/relationships/related-identifiers"),
+            params=data,
+        )
+
+    async def search_player(
+        self,
+        search: str | None = None,
+        *,
+        filter_game: str | None = None,
+        filter_servers: int | None = None,
+        filter_organization: int | None = None,
+        filter_online: bool = False,
+        filter_public: bool = False,
+        flag: str | None = None,
+    ) -> Player:
+        """Grab a list of players based on the filters provided.
+
+        Parameters
+        ----------
+            search (str, optional): Search for specific player. Defaults to None.
+            filter_online (bool, optional): Online or offline players. Defaults to True.
+            filter_servers (int, optional): Server IDs, comma separated. Defaults to None.
+            filter_organization (int, optional): Organization ID. Defaults to None.
+            filter_public (bool, optional): Public or private results? (RCON or Not).
+            filter_game (str, optional): Filters the results to specific game.
+
+        Returns
+        -------
+            dict: A dictionary response of all the players.
+        """
+        data = {
+            "page[size]": "100",
+            "include": "server,identifier,playerFlag,flagPlayer",
+        }
+        if search:
+            data["filter[search]"] = search
+        if filter_servers:
+            data["filter[server]"] = str(filter_servers)
+        if filter_organization:
+            data["filter[organization]"] = str(filter_organization)
+        if flag:
+            data["filter[playerFlags]"] = flag
+        if filter_game:
+            data["filter[server][game]"] = filter_game.lower()
+
+        data["filter[online]"] = "true" if filter_online else "false"
+        data["filter[public]"] = "true" if filter_public else "false"
+
+        r = await self.request(Route(method="GET", path="/players"), params=data)
+        return Player(r.get("data"), http=self)
+
+    async def get_player(self, player_id: int) -> Player:
+        """Retrieve the battlemetrics player information.
+
+        Parameters
+        ----------
+            identifier (int): The Battlemetrics ID of the targeted player.
+
+        Returns
+        -------
+            dict: Returns everything you can view in a DICT form.
+
+        """
+        data = {
+            "include": "identifier,server,playerCounter,playerFlag,flagPlayer",
+        }
+        r = await self.request(Route(method="GET", path=f"/players/{player_id}"), params=data)
+        return Player(r.get("data"), http=self)
+
+    async def play_history(
+        self,
+        player_id: int,
+        server_id: int,
+        start_time: str | datetime | None = None,
+        end_time: str | datetime | None = None,
+    ) -> dict[str, Any]:
+        """Return the data we use for rendering time played history charts.
+
+        Start and stop are truncated to the date.
+
+        Parameters
+        ----------
+            player_id (int): The battlemetrics player ID.
+            server_id (int): The server ID
+            start_time (str): The UTC start. defaults to 5 days ago.
+            end_time (str): The UTC end. Defaults to now.
+
+        Returns
+        -------
+            dict: Dictionary of Datapoints.
+        """
+        if not start_time:
+            now = datetime.now(tz=UTC)
+            start_time = now - timedelta(days=0)
+            start_time = start_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+        if not end_time:
+            end_time = datetime.now(tz=UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+        data = {
+            "start": (
+                start_time
+                if isinstance(start_time, str)
+                else start_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+            ),
+            "stop": (
+                end_time if isinstance(end_time, str) else end_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+            ),
+        }
+        return await self.request(
+            Route(method="GET", path=f"/players/{player_id}/time-played-history/{server_id}"),
+            params=data,
+        )
+
+    async def player_server_info(self, player_id: int, server_id: int) -> dict[str, Any]:
+        """Return server specifics for the given player and server.
+
+        Parameters
+        ----------
+            player_id (int): The battlemetrics player ID.
+            server_id (int): The server ID
+        Returns:
+            dict: Response from the server showing the player server info.
+        """
+        return await self.request(
+            Route(method="GET", path=f"/players/{player_id}/servers/{server_id}"),
+        )
+
+    async def player_session_history(
+        self,
+        player_id: int,
+        *,
+        filter_server: str | None = None,
+        filter_organization: str | None = None,
+    ) -> dict[str, Any]:
+        """Return player's session history.
+
+        Parameters
+        ----------
+            player_id (int): The battlemetrics player id
+            filter_server (str, optional): The specific server ID. Defaults to None.
+            filter_organization (str, optional): The specific organization ID. Defaults to None.
+
+        Returns
+        -------
+            dict: Returns a players session history.
+        """
+        data = {
+            "include": "identifier,server",
+            "page[size]": "100",
+        }
+        if filter_server:
+            data["filter[servers]"] = filter_server
+        if filter_organization:
+            data["filter[organizations]"] = filter_organization
+
+        return await self.request(
+            Route(method="GET", path=f"/players/{player_id}/relationships/sessions"),
+            params=data,
+        )
+
+    async def player_flags(self, player_id: int) -> dict[str, Any]:
+        """Return all the flags on a players profile.
+
+        Parameters
+        ----------
+            player_id (int): Battlemetrics ID of the targeted player.
+
+        Returns
+        -------
+            dict: The profile with all the flags.
+        """
+        data = {
+            "page[size]": "100",
+            "include": "playerFlag",
+        }
+        return await self.request(
+            Route(method="GET", path=f"/players/{player_id}/relationships/flags"),
+            params=data,
+        )
+
+    async def add_flag(self, player_id: int, flag_id: str | None = None) -> dict[str, Any]:
+        """Create or add a flag to the targeted players profile.
+
+        Parameters
+        ----------
+            player_id (int): Battlemetrics ID of the player.
+            flag_id (str, optional): An existing flag ID. Defaults to None.
+
+        Returns
+        -------
+            dict: Player profile relating to the new flag.
+        """
+        data = {
+            "data": [
+                {
+                    "type": "playerFlag",
+                },
+            ],
+        }
+        if flag_id:
+            data["data"][0]["id"] = flag_id
+
+        return await self.request(
+            Route(method="POST", path=f"/players/{player_id}/relationships/flags"),
+            json_dict=data,
+        )
+
+    async def remove_flag(self, player_id: int, flag_id: str) -> None:
+        """Delete a targeted flag from a targeted player ID.
+
+        Parameters
+        ----------
+            player_id (int): Battlemetrics ID of the player.
+            flag_id (str): The ID of the flag to remove.
+
+        Returns
+        -------
+            dict: If you were successful or not.
+        """
+        await self.request(
+            Route(method="DELETE", path=f"/players/{player_id}/relationships/flags/{flag_id}"),
+        )
+
+    async def player_coplay_info(
+        self,
+        player_id: int,
+        *,
+        start_time: str | datetime | None = None,
+        end_time: str | datetime | None = None,
+        player_names: str | None = None,
+        organization_names: str | None = None,
+        server_names: str | None = None,
+    ) -> dict[str, Any]:
+        """Get the coplay data related to the targeted player.
+
+        Parameters
+        ----------
+            player_id (int): The BATTLEMETRICS id of the targeted player
+            time_start (str): UTC time start. Defaults to 7 days ago
+            time_end (str): UTC time ends. Defaults to day.
+            player_names (str, optional): Player names to target. Defaults to None.
+            organization_names (str, optional): Specific Organizations. Defaults to None.
+            server_names (str, optional): Specific servers. Defaults to None.
+
+        Returns
+        -------
+            dict: A dictionary response of all the coplay users.
+        """
+        if not start_time:
+            now = datetime.now(tz=UTC)
+            start_time = now - timedelta(days=0)
+            start_time = start_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+        if not end_time:
+            end_time = datetime.now(tz=UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        data = {
+            "filter[period]": f"{start_time}:{end_time}",
+            "page[size]": "100",
+            "fields[coplayrelation]": "name,duration",
+        }
+        if player_names:
+            data["filter[players]"] = player_names
+        if organization_names:
+            data["filter[organizations]"] = organization_names
+        if server_names:
+            data["filter[servers]"] = server_names
+
+        return await self.request(
+            Route(method="GET", path=f"/players/{player_id}/relationships/coplay"),
+            params=data,
+        )
+
+    async def add_ban(
+        self,
+        reason: str,
+        note: str,
+        org_id: str,
+        banlist: str,
+        server_id: str,
+        battlemetrics_id: int | None = None,
+        steam_id: int | None = None,
+        expires: str | None = None,
+        *,
+        orgwide: bool = True,
+    ) -> dict[str, Any]:
+        """Create a ban for the targeted user.
+
+        One of battlemetrics_id or steam_id is required to ban the user.
+        By default, the ban is set to organization wide.
+
+        Parameters
+        ----------
+            reason (str): Reason for the ban (This is what the user/server sees)
+            note (str): Note attached to the ban (Admins/staff can see this)
+            org_id (str): Organization ID the ban is associated to.
+            banlist (str): Banlist the ban is associated to.
+            server_id (str): Server ID the ban is associated to.
+            expires (str, optional): _description_. Defaults to "permanent".
+            orgwide (bool, optional): _description_. Defaults to True.
+            battlemetrics_id (int, optional): Battlemetrics ID of the banned user.
+            steam_id (int, optional): Steam ID of the banned user.
+
+        Returns
+        -------
+            dict: The results, whether it was successful or not.
+        """
+        if expires:
+            expires = await utils.calculate_future_date(expires)
+
+        data: dict[str, Any] = {
+            "data": {
+                "type": "ban",
+                "attributes": {
+                    "uid": str(uuid.uuid4())[:14],
+                    "reason": reason,
+                    "note": note,
+                    "expires": expires,
+                    "identifiers": [],
+                    "orgWide": orgwide,
+                    "autoAddEnabled": True,
+                    "nativeEnabled": None,
+                },
+                "relationships": {
+                    "organization": {
+                        "data": {
+                            "type": "organization",
+                            "id": f"{org_id}",
+                        },
+                    },
+                    "server": {
+                        "data": {
+                            "type": "server",
+                            "id": f"{server_id}",
+                        },
+                    },
+                    "player": {
+                        "data": {
+                            "type": "player",
+                            "id": f"{battlemetrics_id}",
+                        },
+                    },
+                    "banList": {
+                        "data": {
+                            "type": "banList",
+                            "id": f"{banlist}",
+                        },
+                    },
+                },
+            },
+        }
+        # Grab the complete profile
+        if not steam_id and not battlemetrics_id:
+            fmt = "Submit either a Steam ID or BattleMetrics ID."
+            raise ValueError(fmt)
+        if steam_id and battlemetrics_id:
+            fmt = "Submit either a Steam ID or BattleMetrics ID, not both."
+            raise ValueError(fmt)
+
+        if steam_id:
+            player_data = await self.match_identifiers(
+                identifier=steam_id,
+                identifier_type="steamID",
+            )
+            battlemetrics_id = player_data["data"][0]["relationships"]["player"]["data"]["id"]
+
+        player_info = (
+            await self.get_player(player_id=battlemetrics_id)
+            if isinstance(battlemetrics_id, int)
+            else None
+        )
+
+        # Grab the battlemetrics ID's for the users BEGUID and STEAMID
+        for included in player_info.get("included"):  # type: ignore [reportOptionalIterable]
+            if included["type"] == "identifier":
+                if included["attributes"]["type"] == "BEGUID":
+                    data["data"]["attributes"]["identifiers"].append(included["id"])
+                if included["attributes"]["type"] == "steamID":
+                    data["data"]["attributes"]["identifiers"].append(included["id"])
+
+        return await self.request(Route(method="POST", path="/bans"), json=data)
+
+    async def add_note(
+        self,
+        note: str,
+        player_id: int,
+        organization_id: int,
+        *,
+        shared: bool = True,
+    ) -> dict[str, Any]:
+        """Create a new note.
+
+        Parameters
+        ----------
+            note (str): The note it
+            shared (bool): Will this be shared or not? (True or False), default is True
+            organization_id (int): The organization ID this note belongs to.
+            player_id (int): The battlemetrics ID of the player this note is attached to.
+
+        Returns
+        -------
+            dict: Response from server (was it successful?)
+        """
+        data = {
+            "data": {
+                "type": "playerNote",
+                "attributes": {
+                    "note": note,
+                    "shared": shared,
+                },
+                "relationships": {
+                    "organization": {
+                        "data": {
+                            "type": "organization",
+                            "id": f"{organization_id}",
+                        },
+                    },
+                },
+            },
+        }
+        return await self.request(
+            Route(method="POST", path=f"/players/{player_id}/relationships/notes"),
+            json=data,
         )

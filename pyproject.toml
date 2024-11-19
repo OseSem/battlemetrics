@@ -63,7 +63,10 @@ lint.ignore = [
     "D100",   # docstrings in public modules.
     "D104",   # docstrings in public package.
     "ANN101", # self type hint.
+    "ANN401", # Any type hint.
     "N818",   # Error suffix.
+
+    "PLR0913", # Too many arguments.
 
     "TD002",  # Author in TODO
     "TD003",  # Issue Link in TODO

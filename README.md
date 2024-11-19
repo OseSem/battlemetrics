@@ -45,14 +45,19 @@ To begin using the Battlemetrics API, make sure you have RCON access and an API 
 Refer to example file for examples.
 Here's an example of how to use the Battlemetrics API wrapper:
 ```python
-# Instantiate the API wrapper with your token
-bmapi = battlemetrics("Your token here")
+from battlemetrics import Battlemetrics
 
-# Retrieve player information
-player = asyncio.run(bmapi.player.search(12345))
+async def main() -> None:
+    # Initialize the Battlemetrics class with your API token
+    bm = Battlemetrics("Your API token here")
 
-# Print the player information
-print(player)
+    # Get the player
+    player = await bm.get_player(123456)
+    
+    # Return the players name
+    print(player.name)
+
+asyncio.run(main())
 ```
 Make sure to replace `"Your API token here"` with your actual API token obtained from the Battlemetrics developers page.
 

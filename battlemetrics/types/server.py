@@ -1,4 +1,4 @@
-from typing import Any, Literal, NamedTuple, TypedDict
+from typing import Any, Literal, TypedDict
 from uuid import UUID
 
 
@@ -47,27 +47,3 @@ class Server(TypedDict):
     type: str
     attributes: ServerAttributes
     relationships: ServerRelationships
-
-
-class ServerSearch(NamedTuple):
-    """Represent a search for a server."""
-
-    search: str | None = None
-    countries: list[str] | None = None  # TODO: Add countries type
-    game: str | None = None
-    blacklist: list[str] | None = None
-    whitelist: list[str] | None = None
-    organization: str | None = None
-    gather_rate_min: int = 1
-    gather_rate_max: int = 20
-    group_size_min: int | None = 1
-    group_size_max: int | None = 16
-    map_size_min: int | None = 1
-    map_size_max: int | None = 6000
-    blueprints: bool | Literal["both"] = "both"
-    pve: bool | Literal["both"] = "both"
-    kits: bool | Literal["both"] = "both"
-    status: Literal["offline", "online", "dead", "invalid", "unknown"] = "online"
-    sort_rank: bool = True
-    page_size: int = 100
-    rcon: bool = True
