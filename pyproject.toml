@@ -49,6 +49,11 @@ format-jinja = """
 """
 style = "pep440"
 
+[tool.poetry-dynamic-versioning.substitution]
+patterns = [
+    { value = "(^__version__\\s*(?::.*?)?=\\s*['\"])[^'\"]*(['\"])" },
+]
+
 
 [build-system]
 requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
