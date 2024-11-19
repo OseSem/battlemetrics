@@ -2,7 +2,7 @@
 name = "battlemetrics"
 description = "Asyncronous Python wrapper for the BattleMetrics API."
 # Placeholder, modified by dynamic-versioning.
-version = "0.0.0"
+version = "0.0.0+ge4cb2b2"
 authors = ["Gnomeslayer <declan.otten@live.com.au>", "OseSem <sem@osesem.me>"]
 license = "MIT"
 readme = "README.md"
@@ -48,13 +48,7 @@ format-jinja = """
 {%- endif -%}
 """
 style = "pep440"
-strict = true
 
-[tool.poetry-dynamic-versioning.substitution]
-patterns = [
-    { value = "(^__version__\\s*(?::.*?)?=\\s*['\"])[^'\"]*(['\"])" },
-    { value = "(^version_info\\s*(?::.*?)?=\\s*\\S*?\\()[^)]*(\\))", mode = "version_info" },
-]
 
 [build-system]
 requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
