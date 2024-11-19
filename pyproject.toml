@@ -1,7 +1,8 @@
 [tool.poetry]
 name = "battlemetrics"
 description = "Asyncronous Python wrapper for the BattleMetrics API."
-version = "2.0"
+# Placeholder, modified by dynamic-versioning.
+version = "0.0.0"
 authors = ["Gnomeslayer <declan.otten@live.com.au>", "OseSem <sem@osesem.me>"]
 license = "MIT"
 readme = "README.md"
@@ -30,9 +31,28 @@ python-dotenv = "1.0.1"
 "Homepage" = "https://github.com/Gnomeslayer/battlemetrics"
 "Issue Tracker" = "https://github.com/Gnomeslayer/battlemetrics/issues"
 
+[tool.poetry-dynamic-versioning]
+enable = true
+vcs = "git"
+# If v2.6.0 tag -> 2.6.0
+# If v2.6.0 tag and not at tag -> 2.6.0+g{hash}
+# If v3.0.0a tag -> v3.0.0a0
+# If v3.0.0a tag and not at tag -> 3.0.0a{distance}+g{hash}
+format-jinja = """
+{%- if distance == 0 -%}
+    {{ serialize_pep440(base, stage, revision) }}
+{%- elif stage is none -%}
+    {{ serialize_pep440(base, stage, revision, metadata=["g"+commit]) }}
+{%- else -%}
+    {{ serialize_pep440(base, stage, distance, metadata=["g"+commit]) }}
+{%- endif -%}
+"""
+style = "pep440"
+strict = true
+
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
+build-backend = "poetry_dynamic_versioning.backend"
 
 [tool.taskipy.tasks]
 black = { cmd = "task lint black", help = "Run black" }
