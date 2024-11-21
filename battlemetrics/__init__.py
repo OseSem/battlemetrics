@@ -9,6 +9,7 @@ from .server import *
 from .types import *
 
 # Placeholder, modified by dynamic-versioning.
+# TODO: Make this auto update.
 __version__: Final[str] = "0.0.0"
 
 
