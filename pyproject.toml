@@ -19,7 +19,7 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
 ]
 keywords = ["battlemetrics", "battlemetricsapi", "api", "gaming"]
-dependencies = ["aiohttp==3.9.3"]
+dependencies = ["aiohttp==3.10.11"]
 requires-python = ">=3.6"
 
 [project.urls]
