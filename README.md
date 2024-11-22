@@ -1,18 +1,14 @@
 # Battlemetrics API Wrapper
-<center>
+<div style="text-align: center;">
 
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 ![PyPI - Version](https://img.shields.io/pypi/v/battlemetrics)
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/battlemetrics)
 
-</center>
+</div>
 
 This repository allows users to quickly and easily pull data from the Battlemetrics API. Removing a lot of the guesswork when reading the API.
 
-## Alternatives
-
-### Javascript
-For the javascript equivalent, visit this repository: https://github.com/cubiquitous/battlemetrics-js
 
 # Disclaimer
 Please note that I am an individual member of the community and not affiliated with Battlemetrics. The resources provided here are developed to facilitate the usage of the Battlemetrics API but come with no official endorsement or sponsorship from Battlemetrics.
@@ -69,9 +65,4 @@ For more details on the Battlemetrics API and its capabilities, refer to the off
 If you find any issues or have suggestions for improvement, please feel free to submit a pull request or open an issue in the [issue tracker](https://github.com/Gnomeslayer/battlemetrics/issues). I welcome contributions from the community!
 
 ## Contact
-You can contact me on Discord, simply add me: gnomeslayer
-or, you can join the official [Battlemetrics discord](https://discord.gg/xWa3UNG4yh) and @gnomeslayer there.
-
-
-## Suport
-This repository will ALWAYS be free and hopefully regularly updated, but if you want to support me, you can do so [Here](https://ko-fi.com/gnomeslayer)
+For any support or inquiries, please contact us at this discord: https://discord.gg/z8JkcJyTwG
