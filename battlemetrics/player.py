@@ -8,6 +8,7 @@ from .types.player import Player as PlayerPayload
 if TYPE_CHECKING:
     from typing import Any
 
+    from .flag import Flag
     from .http import HTTPClient
     from .types.player import PlayerAttributes
 
@@ -15,7 +16,7 @@ __all__ = ("Player",)
 
 
 class Player:
-    """Represents a server."""
+    """Represents a player."""
 
     def __init__(self, data: PlayerPayload, *, http: HTTPClient) -> None:
         self._http = http
@@ -213,7 +214,7 @@ class Player:
         """
         return await self._http.remove_flag(self.id, flag_id)
 
-    async def fetch_flags(self) -> dict[str, Any]:
+    async def fetch_flags(self) -> list[Flag] | Flag:
         """Return all the flags on a players profile.
 
         Parameters
