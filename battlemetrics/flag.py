@@ -90,6 +90,10 @@ class Flag:
 
     # TODO : add def Player Flag Delete
 
-    async def update(self) -> None: ...  # noqa: D102
+    async def update(self) -> None:
+        """Update the Flag."""
+        raise NotImplementedError
 
-    async def delete(self) -> None: ...  # noqa: D102
+    async def delete(self) -> None:
+        """Delete the Flag."""
+        raise NotImplementedError
