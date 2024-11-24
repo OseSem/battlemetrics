@@ -11,11 +11,11 @@ import yarl
 
 from . import utils
 from .errors import BMException, Forbidden, HTTPException, NotFound, Unauthorized
+from .flag import Flag
 from .note import Note
 from .organization import Organization
 from .player import Player
 from .server import Server
-from .flag import Flag
 from .types.organization import OrganizationPlayerStats
 
 if TYPE_CHECKING:
@@ -1245,7 +1245,7 @@ class HTTPClient:
             params=data,
         )
 
-    async def player_flags(self, player_id: int) -> dict[str, Any]:
+    async def player_flags(self, player_id: int) -> list[Flag]:
         """Return all the flags on a players profile.
 
         Parameters
@@ -1261,13 +1261,11 @@ class HTTPClient:
             "include": "playerFlag",
         }
 
-  
         r = await self.request(
             Route(method="GET", path=f"/players/{player_id}/relationships/flags"),
             params=data,
         )
-        flagData = r.get("included", [])
-        return [Flag(data=flag, http=self) for flag in flagData]
+        return [Flag(data=flag, http=self) for flag in r.get("included")]
 
     async def add_flag(self, player_id: int, flag_id: str | None = None) -> dict[str, Any]:
         """Create or add a flag to the targeted players profile.
