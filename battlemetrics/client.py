@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from .organization import Organization
     from .player import Player
     from .server import Server
+    from .session import Session
 
 __all__ = ("Battlemetrics",)
 
@@ -88,6 +89,33 @@ class Battlemetrics:
                 The ID of the Player.
         """
         return await self.http.get_player(player_id)
+
+    async def get_session(
+        self,
+        *,
+        filter_server: int | None = None,
+        filter_game: str | None = None,
+        filter_organizations: int | None = None,
+        filter_player: int | None = None,
+        filter_identifiers: int | None = None,
+    ) -> list[Session] | Session:
+        """Return the session information for the targeted server, game or organization.
+
+        Parameters
+        ----------
+            server (int, optional): Targeted server. Defaults to None.
+            game (str, optional): Targeted game. Defaults to None.
+            organizations (int, optional): Targeted Organization. Defaults to None.
+            player (int, optional): Targeted player. Defaults to None.
+            identifiers (int, optional): Targeted identifiers. Defaults to None.
+        """
+        return await self.http.session_info(
+            filter_server=filter_server,
+            filter_game=filter_game,
+            filter_organizations=filter_organizations,
+            filter_player=filter_player,
+            filter_identifiers=filter_identifiers,
+        )
 
     async def search_player(
         self,

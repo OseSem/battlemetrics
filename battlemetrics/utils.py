@@ -30,11 +30,12 @@ def format_relationships(
     if data:
         for key, value in data.items():
             name = f"{key}_id"
-            new_data[name] = (
-                int(value.get("data").get("id"))
-                if isinstance(value.get("data").get("id"), int)
-                else value.get("data").get("id")
-            )
+            if isinstance(value.get("data"), list):
+                new_data[name] = value.get("data")[0].get("id")
+            elif isinstance(value.get("data").get("id"), int):
+                new_data[name] = value.get("data").get("id")
+            else:
+                new_data[name] = value.get("data").get("id")
 
     return new_data
 

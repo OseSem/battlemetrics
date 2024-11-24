@@ -16,6 +16,7 @@ from .note import Note
 from .organization import Organization
 from .player import Player
 from .server import Server
+from .session import Session
 from .types.organization import OrganizationPlayerStats
 
 if TYPE_CHECKING:
@@ -1519,7 +1520,7 @@ class HTTPClient:
         filter_organizations: int | None = None,
         filter_player: int | None = None,
         filter_identifiers: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> list[Session] | Session:
         """Return the session information for the targeted server, game or organization.
 
         Parameters
@@ -1529,10 +1530,6 @@ class HTTPClient:
             organizations (int, optional): Targeted Organization. Defaults to None.
             player (int, optional): Targeted player. Defaults to None.
             identifiers (int, optional): Targeted identifiers. Defaults to None.
-
-        Returns
-        -------
-            dict: Session information.
         """
         data = {
             "include": "identifier,server,player",
@@ -1549,4 +1546,23 @@ class HTTPClient:
         if filter_identifiers:
             data["filter[identifiers]"] = str(filter_identifiers)
 
-        return await self.request(Route(method="GET", path="/sessions"), params=data)
+        r = await self.request(Route(method="GET", path="/sessions"), params=data)
+        r = r.get("data")
+
+        if len(r) == 0:
+            fmt = "No servers found."
+            raise ValueError(fmt)
+
+        if len(r) > 1:
+            return [
+                Session(
+                    data=x,
+                    http=self,
+                )
+                for x in r
+            ]
+
+        return Session(
+            data=r,
+            http=self,
+        )
