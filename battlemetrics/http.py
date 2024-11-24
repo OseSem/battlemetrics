@@ -15,6 +15,7 @@ from .note import Note
 from .organization import Organization
 from .player import Player
 from .server import Server
+from .flag import Flag
 from .types.organization import OrganizationPlayerStats
 
 if TYPE_CHECKING:
@@ -330,7 +331,7 @@ class HTTPClient:
         url = f"/players/{player_id}/relationships/notes/{note_id}"
 
         content: str = (
-            f"{existing_content}\n{attributes.get("note")}" if append else attributes.get("note")
+            f'{existing_content}\n{attributes.get("note")}' if append else attributes.get("note")
         )
 
         data = {
@@ -338,9 +339,9 @@ class HTTPClient:
                 "type": "playerNote",
                 "id": "example",
                 "attributes": {
-                    "clearanceLevel": f"{attributes.get("clearanceLevel")}",
+                    "clearanceLevel": f'{attributes.get("clearanceLevel")}',
                     "note": f"{content}",
-                    "shared": f"{str(attributes.get("shared")).lower()}",
+                    "shared": f'{str(attributes.get("shared")).lower()}',
                 },
             },
         }
@@ -1259,10 +1260,14 @@ class HTTPClient:
             "page[size]": "100",
             "include": "playerFlag",
         }
-        return await self.request(
+
+  
+        r = await self.request(
             Route(method="GET", path=f"/players/{player_id}/relationships/flags"),
             params=data,
         )
+        flagData = r.get("included", [])
+        return [Flag(data=flag, http=self) for flag in flagData]
 
     async def add_flag(self, player_id: int, flag_id: str | None = None) -> dict[str, Any]:
         """Create or add a flag to the targeted players profile.

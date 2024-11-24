@@ -214,7 +214,7 @@ class Player:
         """
         return await self._http.remove_flag(self.id, flag_id)
 
-    async def fetch_flags(self) -> list[Flag] | Flag:
+    async def fetch_flags(self) -> list[Flag]:
         """Return all the flags on a players profile.
 
         Parameters
