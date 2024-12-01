@@ -15,7 +15,7 @@ __all__ = ("Session",)
 
 
 class Session:
-    """Represents a server."""
+    """Represents a session."""
 
     def __init__(self, data: SessionPayload, *, http: HTTPClient) -> None:
         self._http = http
