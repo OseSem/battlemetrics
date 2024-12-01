@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Literal
 
 from battlemetrics.http import HTTPClient, Route
-from battlemetrics.misc import ActivityLogs, APIScopes, Metrics
+from battlemetrics.types.misc import ActivityLogs, APIScopes, Metrics
 
 if TYPE_CHECKING:
     from asyncio import AbstractEventLoop
@@ -285,6 +285,24 @@ class Battlemetrics:
             dict: Dictionary response of any matches.
         """
         return await self.http.player_identifiers(player_id)
+
+    async def rust_banlist_export(
+        self,
+        organization_id: int,
+        server_id: int | None = None,
+    ) -> list[dict[str, Any]]:
+        """Export your rust banlist.
+
+        Parameters
+        ----------
+            organization_id (int): Organization ID the banlist belongs to
+            server_id (int): Server ID the banlist is associated with.
+
+        Returns
+        -------
+            list[dict]: A list of dictionaries that provide the ban data.
+        """
+        return await self.http.rust_banlist_export(organization_id, server_id)
 
     async def check_api_scopes(self, token: str | None = None) -> APIScopes:
         """Retrieve the token scopes from the oauth.
