@@ -1,9 +1,10 @@
 import logging
 from typing import Final
 
+from battlemetrics.types.misc import *
+
 from .client import *
 from .errors import *
-from .misc import *
 from .note import *
 from .server import *
 from .types import *

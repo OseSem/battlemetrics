@@ -10,6 +10,7 @@ import aiohttp
 import yarl
 
 from . import utils
+from .banlist import BanList
 from .errors import BMException, Forbidden, HTTPException, NotFound, Unauthorized
 from .flag import Flag
 from .note import Note
@@ -17,6 +18,7 @@ from .organization import Organization
 from .player import Player
 from .server import Server
 from .session import Session
+from .types.banlist import BanListExemption, BanListInvite
 from .types.organization import OrganizationPlayerStats
 
 if TYPE_CHECKING:
@@ -1565,4 +1567,659 @@ class HTTPClient:
         return Session(
             data=r,
             http=self,
+        )
+
+    async def get_banlist(self, banlist_id: str) -> BanList:
+        """Return the banlist information of the targeted banlist.
+
+        Parameters
+        ----------
+            banlist_id (str): The ID of the banlist you want.
+
+        Returns
+        -------
+            dict: The dictionary response of the targeted banlist.
+        """
+        data = {
+            "page[size]": "100",
+            "include": "organization,owner,server",
+        }
+        r = await self.request(
+            Route(
+                method="GET",
+                path="/ban-lists",
+            ),
+            params=data,
+        )
+        for banlist in r.get("data"):
+            if banlist.get("id") == banlist_id:
+                return BanList(
+                    banlist.get("data"),
+                    http=self,
+                )
+
+        fmt = "Could not find that banlist."
+        raise ValueError(fmt)
+
+    async def create_banlist(
+        self,
+        *,
+        name: str,
+        organization_id: int,
+        action: str,
+        default_identifiers: list[IDENTIFIERS],
+        default_reasons: list[str],
+        autoadd: bool = False,
+        native_ban: bool = False,
+    ) -> BanList:
+        """Create a new banlist for your targeted organization.
+
+        Parameters
+        ----------
+            name (str): Name of the ban list.
+            organization_id (int): The organization ID.
+            action (str): "none", "log", "kick"
+            default_identifiers (list): ["steamID", "ip"]
+            default_reasons (list): List of default reasons for the ban.
+            autoadd (bool, optional): true or false. Defaults to False.
+            native_ban (bool, optional): Whether this ban should be a native ban. Defaults to False.
+        """
+        data: dict[str, Any] = {
+            "data": {
+                "type": "banList",
+                "attributes": {
+                    "name": f"{name}",
+                    "action": f"{action}",
+                    "defaultIdentifiers": default_identifiers,
+                    "defaultReasons": default_reasons,
+                    "defaultAutoAddEnabled": str(autoadd).lower(),
+                    "defaultNativeEnabled": str(native_ban).lower(),
+                    "nativeBanTTL": None,
+                    "nativeBanTempMaxExpires": None,
+                    "nativeBanPermMaxExpires": None,
+                },
+                "relationships": {
+                    "organization": {
+                        "data": {
+                            "type": "organization",
+                            "id": f"{organization_id}",
+                        },
+                    },
+                    "owner": {
+                        "data": {
+                            "type": "organization",
+                            "id": f"{organization_id}",
+                        },
+                    },
+                },
+            },
+        }
+        r = await self.request(
+            Route(
+                method="POST",
+                path="/ban-lists",
+            ),
+            json=data,
+        )
+        return BanList(
+            data=r.get("data"),
+            http=self,
+        )
+
+    async def rust_banlist_export(
+        self,
+        organization_id: int,
+        server_id: int | None = None,
+    ) -> list[dict[str, Any]]:
+        """Export your rust banlist.
+
+        Parameters
+        ----------
+            organization_id (int): Organization ID the banlist belongs to
+            server_id (int): Server ID the banlist is associated with.
+        """
+        params = {
+            "filter[organization]": organization_id,
+            "format": "rust/bans.cfg",
+        }
+        if server_id:
+            params["filter[server]"] = server_id
+
+        return await self.request(
+            Route(
+                method="GET",
+                path="/bans/export",
+            ),
+            params=params,
+        )
+
+    async def banlist_unsubscribe(self, banlist_id: str, organization_id: int) -> None:
+        """Unsubscribe from a banlist.
+
+        Parameters
+        ----------
+            banlist_id (str): ID of the banlist
+            organization_id (str): Your organization ID
+        """
+        await self.request(
+            Route(
+                method="DELETE",
+                path=f"/ban-lists/{banlist_id}/relationships/organizations/{organization_id}",
+            ),
+        )
+
+    # TODO: Response unknown so I don't know what to return.
+    async def banlist_subscribed_orgs(self, banlist_id: str) -> dict[str, Any]:
+        """List all the organizations that are subscribed to the targeted banlist.
+
+        You require manage perms to use this list (or be the owner).
+
+        Parameters
+        ----------
+            banlist_id (str): The Banlist ID
+
+        Returns
+        -------
+            dict: A dictionary response of all the organizations subbed to the targeted banlist.
+        """
+        data = {
+            "include": "server,organization,owner",
+            "page[size]": "100",
+        }
+        return await self.request(
+            Route(
+                method="GET",
+                path=f"/ban-lists/{banlist_id}/relationships/organizations",
+            ),
+            params=data,
+        )
+
+    # TODO: Response unknown so I don't know what to return.
+    async def banlist_subscribers(self, banlist_id: str, organization_id: int) -> dict[str, Any]:
+        """Get the subscriber information for a specific banlist.
+
+        Parameters
+        ----------
+            banlist_id (str): The ID of the targeted banlist.
+            organization_id (str): The ID of the targeted organization subscribed to the banlist.
+        """
+        data = {
+            "include": "organization,owner,server",
+        }
+        return await self.request(
+            Route(
+                method="GET",
+                path=f"/ban-lists/{banlist_id}/relationships/{organization_id}",
+            ),
+            params=data,
+        )
+
+    async def banlist_read(self, banlist_id: str) -> str:
+        """Retrieve the name of a banlist by the banlist id.
+
+        Parameters
+        ----------
+            banlist_id (str): The ID of the banlist.
+        """
+        data = {
+            "include": "owner",
+        }
+        r = await self.request(
+            Route(
+                method="GET",
+                path=f"/ban-lists/{banlist_id}",
+            ),
+            params=data,
+        )
+        return r.get("data").get("attributes").get("name")
+
+    async def banlist_update(
+        self,
+        banlist_id: str,
+        organization_id: int,
+        *,
+        name: str | None = None,
+        action: str | None = None,
+        default_identifiers: list[IDENTIFIERS],
+        default_reasons: list[str],
+        autoadd: bool | None = None,
+        native_ban: bool | None = None,
+    ) -> BanList:
+        """Update the targeted banlist with the altered information you supply.
+
+        Parameters
+        ----------
+            banlist_id (str): Banlist ID.
+            organization_id (int): Organization ID
+            name (str, optional): Name of the banlist
+            action (str, optional): "none", "log" or "kick"
+            ban_identifiers (list, optional): ["steamID", "ip"]
+            list_default_reasons (list, optional): [List of default reasons]
+            autoadd (bool, optional): True or False
+            native_ban (bool, optional): True or False
+        """
+        data: dict[str, Any] = {
+            "data": {
+                "type": "banList",
+                "attributes": {
+                    "name": f"{name}",
+                    "action": f"{action}",
+                    "defaultIdentifiers": default_identifiers,
+                    "defaultReasons": default_reasons,
+                    "defaultAutoAddEnabled": str(autoadd).lower(),
+                    "defaultNativeEnabled": str(native_ban).lower(),
+                },
+                "relationships": {
+                    "organization": {
+                        "data": {
+                            "type": "organization",
+                            "id": f"{organization_id}",
+                        },
+                    },
+                    "owner": {
+                        "data": {
+                            "type": "organization",
+                            "id": f"{organization_id}",
+                        },
+                    },
+                },
+            },
+        }
+
+        r = await self.request(
+            Route(
+                method="PATCH",
+                path=f"/ban-lists/{banlist_id}/relationships/organizations/{organization_id}",
+            ),
+            json=data,
+        )
+        return BanList(
+            r.get("data"),
+            http=self,
+        )
+
+    async def banlist_list(self) -> list[BanList]:
+        """List all your banlists for you.
+
+        Returns
+        -------
+            dict: A dictionary response of all the banlists you have access to.
+        """
+        data = {
+            "include": "server,organization,owner",
+            "page[size]": "100",
+        }
+        request = await self.request(
+            Route(
+                method="GET",
+                path="/ban-lists",
+            ),
+            params=data,
+        )
+        request = request.get("data")
+
+        if len(request) == 0:
+            fmt = "No banlists found."
+            raise ValueError(fmt)
+
+        return [
+            BanList(
+                data=x,
+                http=self,
+            )
+            for x in request
+        ]
+
+    # TODO: Type for perm...
+    async def create_banlist_invite(
+        self,
+        organization_id: int,
+        banlist_id: str,
+        *,
+        uses: int = 1,
+        limit: int = 1,
+        permmanage: bool = False,
+        permcreate: bool = False,
+        permupdate: bool = False,
+        permdelete: bool = False,
+    ) -> BanListInvite | None:
+        """Create an invite.
+
+        Parameters
+        ----------
+            organization_id (int): The target organization to be invited.
+            banlist_id (str): The ID of the banlist you want to create the invite for
+            permManage (bool): Are they allowed to manage it?
+            permCreate (bool): Can they create stuff related to this banlist?
+            permUpdate (bool): Can they update the banlist?
+            permDelete (bool): Can they delete stuff related to this banlist?
+            uses (int, optional): Number of times this banlist invite has been used. Defaults to 1.
+            limit (int, optional): How many times it's allowed to be used. Defaults to 1.
+
+        Returns
+        -------
+            dict: Returns whether it was successful or not.
+        """
+        data = {
+            "data": {
+                "type": "banListInvite",
+                "attributes": {
+                    "uses": uses,
+                    "limit": limit,
+                    "permManage": permmanage,
+                    "permCreate": permcreate,
+                    "permUpdate": permupdate,
+                    "permDelete": permdelete,
+                },
+                "relationships": {
+                    "organization": {
+                        "data": {
+                            "type": "organization",
+                            "id": f"{organization_id}",
+                        },
+                    },
+                },
+            },
+        }
+        r: dict[str, Any] = await self.request(
+            Route(
+                method="POST",
+                path=f"/ban-lists/{banlist_id}/relationships/invites",
+            ),
+            json=data,
+        )
+
+        relationships = utils.format_relationships(r.get("relationships"))
+        return BanListInvite(
+            id=int(r.get("data").get("id")),  # type: ignore [reportOptionalMemberAccess]
+            type=r.get("data").get("type"),  # type: ignore [reportOptionalMemberAccess]
+            banlist_id=relationships.get("banList_id"),  # type: ignore [reportArgumentType]
+            organization_id=relationships.get("organization_id"),  # type: ignore [reportArgumentType]
+        )
+
+    async def read_banlist_invitation(self, invite_id: str) -> BanListInvite:
+        """See the information about a specific banlist invite, such as uses.
+
+        Paramaters
+        ----------
+            invite_id (str): The banlist invite id.
+
+        Returns
+        -------
+            dict: The banlist invite information
+        """
+        data = {
+            "include": "banList",
+            "fields[organization]": "tz,banTemplate",
+            "fields[user]": "nickname",
+            "fields[banList]": "name, action",
+            "fields[banListInvite]": "uses",
+        }
+        r = await self.request(
+            Route(
+                method="GET",
+                path=f"/ban-list-invites/{invite_id}",
+            ),
+            params=data,
+        )
+        relationships = utils.format_relationships(r.get("relationships"))
+        return BanListInvite(
+            id=int(r.get("data").get("id")),
+            type=r.get("data").get("type"),
+            banlist_id=relationships.get("banList_id"),  # type: ignore [reportArgumentType]
+            organization_id=relationships.get("organization_id"),  # type: ignore [reportArgumentType]
+        )
+
+    async def banlist_accept_invite(
+        self,
+        code: str,
+        *,
+        action: str,
+        default_identifiers: list[IDENTIFIERS],
+        default_reasons: list[str],
+        organization_id: int,
+        organization_owner_id: str,
+        autoadd: bool,
+        native_ban: bool,
+    ) -> BanListInvite:
+        """Accept an invitation to subscribe to a banlist.
+
+        Parameters
+        ----------
+            code (str): Invitation code.
+            action (str): "none", "log" or "kick"
+            default_identifiers (list): ["steamID", "ip"]
+            default_reasons (list): ["Banned for hacking"]
+            organization_id (str): ID of your organization?
+            organization_owner_id (str): ID of the owner of the organization
+            autoadd (bool): True or False
+            native_ban (bool): True or False
+        """
+        data = {
+            "data": {
+                "type": "banList",
+                "attributes": {
+                    "code": code,
+                    "action": action,
+                    "defaultIdentifiers": default_identifiers,
+                    "defaultReasons": default_reasons,
+                    "defaultAutoAddEnabled": str(autoadd).lower(),
+                    "defaultNativeEnabled": str(native_ban).lower(),
+                    "nativeBanTTL": None,
+                    "nativeBanTempMaxExpires": None,
+                    "nativeBanPermMaxExpires": None,
+                },
+                "relationships": {
+                    "organization": {
+                        "data": {
+                            "type": "organization",
+                            "id": f"{organization_id}",
+                        },
+                    },
+                    "owner": {
+                        "data": {
+                            "type": "organization",
+                            "id": f"{organization_owner_id}",
+                        },
+                    },
+                },
+            },
+        }
+        r = await self.request(
+            Route(
+                method="POST",
+                path="/ban-lists/accept-invite",
+            ),
+            json=data,
+        )
+        return BanListInvite(
+            id=int(r.get("data").get("id")),
+            banlist_id=r.get("relationships").get("banList").get("data").get("id"),
+            organization_id=r.get("relationships").get("organization").get("data").get("id"),
+        )
+
+    async def banlist_invite_list(self, banlist_id: str) -> list[BanListInvite]:
+        """Return all the invites for a specific banlist ID.
+
+        Parameters
+        ----------
+            banlist_id (str): The ID of a banlist
+        """
+        data = {
+            "include": "banList",
+            "fields[organization]": "tz,banTemplate",
+            "fields[user]": "nickname",
+            "fields[banList]": "name,action",
+            "fields[banListInvite]": "uses",
+            "page[size]": "100",
+        }
+        r = await self.request(
+            Route(
+                method="GET",
+                path=f"/ban-lists/{banlist_id}/relationships/invites",
+            ),
+            params=data,
+        )
+        return [
+            BanListInvite(
+                id=int(x.get("id")),
+                type=x.get("type"),
+                banlist_id=banlist_id,
+                organization_id=x.get("relationships").get("data").get("id"),  # type: ignore [reportArgumentType]
+            )
+            for x in r.get("data")
+        ]
+
+    async def delete_banlist_invite(self, banlist_id: str, banlist_invite_id: str) -> None:
+        """Delete an invite from a targeted banlist.
+
+        Parameters
+        ----------
+            banlist_id (str): The target banlist
+            banlist_invite_id (str): The target invite.
+        """
+        await self.request(
+            Route(
+                method="DELETE",
+                path=f"/ban-lists/{banlist_id}/relationships/invites/{banlist_invite_id}",
+            ),
+        )
+
+    async def banlist_exemption_create(
+        self,
+        ban_id: int,
+        organization_id: int,
+        reason: str | None = None,
+    ) -> BanListExemption:
+        """Create an exemption to the banlist.
+
+        Parameters
+        ----------
+            ban_id (str): The ban id you want to create an exemption for.
+            organization_id (int): The organization associated to the exemption
+            reason (str, optional): Reason for the exemption. Defaults to None.
+        """
+        data = {
+            "data": {
+                "type": "banExemption",
+                "attributes": {
+                    "reason": reason,
+                },
+                "relationships": {
+                    "organization": {
+                        "data": {
+                            "type": "organization",
+                            "id": f"{organization_id}",
+                        },
+                    },
+                },
+            },
+        }
+        r = await self.request(
+            Route(
+                method="POST",
+                path=f"/bans/{ban_id}/relationships/exemptions",
+            ),
+            json=data,
+        )
+        return BanListExemption(
+            id=int(r.get("data").get("id")),
+            reason=r.get("data").get("attributes").get("reason"),
+            ban_id=ban_id,
+            organization_id=organization_id,
+        )
+
+    async def banlist_exemption_delete(self, ban_id: str) -> None:
+        """Delete an exemption.
+
+        Parameters
+        ----------
+            ban_id (str): The ban that has an exemption
+        """
+        await self.request(
+            Route(method="DELETE", path=f"/bans/{ban_id}/relationships/exemptions"),
+        )
+
+    async def banlist_exemption_info(self, ban_id: int, exemption_id: str) -> BanListExemption:
+        """Pull information from a ban regarding a specific exemption.
+
+        Parameters
+        ----------
+            ban_id (str): Target ban
+            exemption_id (str): Target exemption
+        """
+        r = await self.request(
+            Route(method="GET", path=f"/bans/{ban_id}/relationships/exemptions/{exemption_id}"),
+        )
+        return BanListExemption(
+            id=int(r.get("data").get("id")),
+            reason=r.get("data").get("attributes").get("reason"),
+            ban_id=int(ban_id),
+            organization_id=r.get("relationships").get("organization").get("data").get("id"),
+        )
+
+    async def banlist_exemptions_info(self, ban_id: str) -> BanListExemption:
+        """Pull all exemptions related to the targeted ban.
+
+        Parameters
+        ----------
+            ban_id (str): Target ban
+        """
+        data = {
+            "fields[banExemption]": "reason",
+        }
+        r = await self.request(
+            Route(method="GET", path=f"/bans/{ban_id}/relationships/exemptions"),
+            params=data,
+        )
+        return BanListExemption(
+            id=int(r.get("data").get("id")),
+            reason=r.get("data").get("attributes").get("reason"),
+            ban_id=int(ban_id),
+            organization_id=r.get("relationships").get("organization").get("data").get("id"),
+        )
+
+    async def banlist_exemption_update(
+        self,
+        ban_id: int,
+        exemption_id: str,
+        reason: str,
+    ) -> BanListExemption:
+        """Update a ban exemption.
+
+        Parameters
+        ----------
+            ban_id (str): The target ban
+            exemption_id (str): The target exemption
+            reason (str): New reason
+        """
+        exemption = await self.banlist_exemption_info(ban_id=ban_id, exemption_id=exemption_id)
+
+        data = {
+            "data": {
+                "type": "banExemption",
+                "id": exemption_id,
+                "attributes": {
+                    "reason": reason,
+                },
+                "relationships": {
+                    "organization": {
+                        "data": {
+                            "type": "organization",
+                            "id": f"{exemption.organization_id}",
+                        },
+                    },
+                },
+            },
+        }
+
+        r = await self.request(
+            Route(method="PATCH", path=f"/bans/{ban_id}/relationships/exemptions"),
+            json=data,
+        )
+        return BanListExemption(
+            id=int(r.get("data").get("id")),
+            reason=reason,
+            ban_id=ban_id,
+            organization_id=r.get("relationships").get("organization").get("data").get("id"),
         )

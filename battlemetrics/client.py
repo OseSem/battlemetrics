@@ -12,12 +12,14 @@ if TYPE_CHECKING:
 
     from aiohttp import BaseConnector
 
+    from .banlist import BanList
     from .http import IDENTIFIERS
     from .note import Note
     from .organization import Organization
     from .player import Player
     from .server import Server
     from .session import Session
+    from .types.banlist import BanListInvite
 
 __all__ = ("Battlemetrics",)
 
@@ -303,6 +305,55 @@ class Battlemetrics:
             list[dict]: A list of dictionaries that provide the ban data.
         """
         return await self.http.rust_banlist_export(organization_id, server_id)
+
+    async def banlist_list(self) -> list[BanList]:
+        """List all your banlists for you."""
+        return await self.http.banlist_list()
+
+    async def read_banlist_invitation(self, invite_id: str) -> BanListInvite:
+        """See the information about a specific banlist invite, such as uses.
+
+        Paramaters
+        ----------
+            invite_id (str): The banlist invite id.
+        """
+        return await self.http.read_banlist_invitation(invite_id)
+
+    async def banlist_accept_invite(
+        self,
+        code: str,
+        action: str,
+        default_identifiers: list[IDENTIFIERS],
+        default_reasons: list[str],
+        organization_id: int,
+        organization_owner_id: str,
+        *,
+        autoadd: bool,
+        native_ban: bool,
+    ) -> BanListInvite:
+        """Accept an invitation to subscribe to a banlist.
+
+        Parameters
+        ----------
+            code (str): Invitation code.
+            action (str): "none", "log" or "kick"
+            default_identifiers (list): ["steamID", "ip"]
+            default_reasons (list): ["Banned for hacking"]
+            organization_id (str): ID of your organization?
+            organization_owner_id (str): ID of the owner of the organization
+            autoadd (bool): True or False
+            native_ban (bool): True or False
+        """
+        return await self.http.banlist_accept_invite(
+            code=code,
+            action=action,
+            default_identifiers=default_identifiers,
+            default_reasons=default_reasons,
+            organization_id=organization_id,
+            organization_owner_id=organization_owner_id,
+            autoadd=autoadd,
+            native_ban=native_ban,
+        )
 
     async def check_api_scopes(self, token: str | None = None) -> APIScopes:
         """Retrieve the token scopes from the oauth.
