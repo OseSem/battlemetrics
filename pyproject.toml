@@ -1,8 +1,7 @@
 [tool.poetry]
 name = "battlemetrics"
 description = "Asyncronous Python wrapper for the BattleMetrics API."
-# Placeholder, modified by dynamic-versioning.
-version = "0.0.0+ge4cb2b2"
+version = "2.0"
 authors = ["Gnomeslayer <declan.otten@live.com.au>", "OseSem <sem@osesem.me>"]
 license = "MIT"
 readme = "README.md"
