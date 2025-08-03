@@ -225,7 +225,6 @@ class HTTPClient:
                 return data
 
             if isinstance(data, dict):
-                print(data)
                 if response.status == 401:
                     _log.warning(
                         "Path %s returned 401, your API key may be invalid.",
