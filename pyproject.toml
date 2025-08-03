@@ -1,0 +1,93 @@
+[tool.poetry]
+name = "battlemetrics"
+description = "Asyncronous Python wrapper for the BattleMetrics API."
+version = "2.0a"
+authors = ["OseSem <sem@osesem.me>", "Gnomeslayer <declan.otten@live.com.au>"]
+license = "MIT"
+readme = "README.md"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+aiohttp = "^3.9.3"
+pydantic = "^2.0.0"
+python-dateutil = "^2.8.2"
+
+[tool.poetry.group.dev.dependencies]
+pre-commit = "^4.2.0"
+pyright = "^1.1.383"
+taskipy = "^1.13.0"
+python-dotenv = "^1.0.1"
+
+
+[tool.poetry.urls]
+"Homepage" = "https://github.com/Gnomeslayer/battlemetrics"
+"Issue Tracker" = "https://github.com/Gnomeslayer/battlemetrics/issues"
+
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.taskipy.tasks]
+black = { cmd = "task lint black", help = "Run black" }
+isort = { cmd = "task lint isort", help = "Run isort" }
+lint = { cmd = "pre-commit run --all-files", help = "Check all files for linting errors" }
+precommit = { cmd = "pre-commit install --install-hooks", help = "Install the precommit hook" }
+pyright = { cmd = "python -m pyright", help = "Run pyright" }
+
+[tool.pyright]
+typeCheckingMode = "strict"
+
+reportReturnType = false
+reportUnnecessaryComparison = false
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312"]
+
+[tool.isort]
+profile = "black"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "ERA001", # commented out code.
+    "D100",   # docstrings in public modules.
+    "D104",   # docstrings in public package.
+    "ANN101", # self type hint.
+    "ANN401", # Any type hint.
+    "N818",   # Error suffix.
+
+    "PLR0913", # Too many arguments.
+    "PLR2004", # Constant Variables
+
+    "C901", # Function is too complex
+
+    "TD002",  # Author in TODO
+    "TD003",  # Issue Link in TODO
+    "FIX002", # TODO Found
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/__init__.py" = [
+    "F403", # Wildcard imports
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.pylint]
+max-args = 6

@@ -1,0 +1,57 @@
+name: Lint
+
+on:
+  push:
+
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
+      - uses: pre-commit/action@v3.0.1
+        with:
+          extra_args: --all-files
+
+  pyright:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v3
+      - run: pipx install poetry
+
+      - uses: actions/setup-python@v4
+        with:
+          cache: "poetry"
+      - run: poetry install
+      - run: echo "$(poetry env info --path)/bin" >> $GITHUB_PATH
+
+      - uses: jakebailey/pyright-action@v2
+        with:
+          pylance-version: latest-release
+
+  # Thanks to https://github.com/DisnakeDev for finding this job.
+  check: # This job does nothing and is only used for the branch protection
+    if: always()
+    needs:
+      - pre-commit
+      - pyright
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Decide whether the needed jobs succeeded or failed
+        uses: re-actors/alls-green@v1.2.2
+        with:
+          jobs: ${{ toJSON(needs) }}
