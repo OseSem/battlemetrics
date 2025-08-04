@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import uuid
+from enum import Enum
 from logging import getLogger
 from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
@@ -21,22 +22,25 @@ if TYPE_CHECKING:
 _log = getLogger(__name__)
 
 
-IDENTIFIERS = Literal[
-    "steamID",
-    "BEGUID",
-    "legacyBEGUID",
-    "ip",
-    "name",
-    "survivorName",
-    "steamFamilyShareOwner",
-    "conanCharName",
-    "egsID",
-    "funcomID",
-    "playFabID",
-    "mcUUID",
-    "7dtdEOS",
-    "battlebitHWID",
-]
+class IdentifierType(Enum):
+    """A player identifier type."""
+
+    BE_GUID = "BEGUID"
+    BE_LEGACY_GUID = "legacyBEGUID"
+    CONAN_CHAR_NAME = "conanCharName"
+    EGS_ID = "egsID"
+    FUNCOM_ID = "funcomID"
+    IP = "ip"
+    MC_UUID = "mcUUID"
+    NAME = "name"
+    PLAY_FAB_ID = "playFabID"
+    STEAM_FAMILY_SHARE_OWNER = "steamFamilyShareOwner"
+    STEAM_ID = "steamID"
+    SURVIVOR_NAME = "survivorName"
+
+    def __repr__(self) -> str:
+        """Return a string representation of the identifier type."""
+        return f"<{self.__class__.__name__}.{self.name}>"
 
 
 async def json_or_text(
@@ -161,8 +165,6 @@ class HTTPClient:
     async def request(
         self,
         route: Route,
-        *,
-        headers: dict[str, str] | None = None,
         **kwargs: Any,
     ) -> Any:
         """
@@ -175,8 +177,6 @@ class HTTPClient:
         ----------
         route : Route
             The route object containing the method and URL for the request.
-        headers : dict[str, str] | None, optional
-            Optional headers to include with the request. Defaults to None.
 
         Returns
         -------
@@ -196,9 +196,9 @@ class HTTPClient:
         url = route.url
         path = route.url.path
 
-        headers = {
+        headers: dict[str, Any] = {
             "Accept": "application/json",
-            **(headers or {}),
+            **(kwargs.get("headers") or {}),
         }
 
         if self.api_key:
@@ -218,8 +218,6 @@ class HTTPClient:
 
             # errors typically have text involved, so this should be safe 99.5% of the time.
             data = await json_or_text(response)
-
-            await self.close()
 
             if 200 <= response.status < 300:
                 return data
@@ -267,13 +265,10 @@ class HTTPClient:
         org_wide: bool = True,
         auto_add_enabled: bool = True,
         native_enabled: bool = True,
+        identifiers: list[str | dict[str, Any]] | None = None,
         expires: str | None = None,
     ) -> Any:
-        """
-        Create a ban with all required and optional parameters.
-
-        Parameters match the BattleMetrics API documentation.
-        """
+        """Create a ban with all required and optional parameters."""
         data: dict[str, Any] = {
             "data": {
                 "type": "ban",
@@ -282,7 +277,7 @@ class HTTPClient:
                     "reason": reason,
                     "note": note,
                     "expires": expires,
-                    "identifiers": [],  # TODO: Add identifiers after get_player is implemented
+                    "identifiers": identifiers or [],  # TODO: Add identifier handling
                     "orgWide": org_wide,
                     "autoAddEnabled": auto_add_enabled,
                     "nativeEnabled": native_enabled,
@@ -316,8 +311,14 @@ class HTTPClient:
             },
         }
 
-        route = Route(
-            method="POST",
-            path="/bans",
+        return await self.request(Route(method="POST", path="/bans"), json=data)
+
+    async def ban_info(self, ban_id: int) -> Any:
+        """Get information about a specific ban."""
+        return await self.request(
+            Route(
+                method="GET",
+                path=f"/bans/{ban_id}",
+                include="organization,player,server,user",
+            ),
         )
-        return await self.request(route, json=data)
