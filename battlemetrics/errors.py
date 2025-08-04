@@ -30,20 +30,24 @@ class HTTPException(BMException):
     def __init__(self, response: ClientResponse, message: str | dict[str, Any] | None) -> None:
         self.response: ClientResponse = response
         self.status: int = response.status  # type: ignore[reportAccessAttributeIssue]
-        self.code: int
-        self.text: str
+        self.code: int = 0
+        self.text: str = ""
+        self.title: str = ""
         if isinstance(message, dict):
-            self.code = message.get("code", 0)
-            self.text = message.get("message", "")
+            error = message["errors"][0]
+            self.code = (
+                int(error.get("status", "")) if str(error.get("status", "")).isdigit() else 0
+            )
+            self.text = error.get("title", "")
+            self.title = error.get("title", "")
         else:
-            self.text = message or ""
+            self.text = str(message) if message else ""
             self.code = 0
-
-        fmt = "{0.status} {0.reason} (error code: {1})"
+        fmt = "{0.status} {0.reason}"
         if len(self.text):
-            fmt += ": {2}"
+            fmt += ": {1}"
 
-        super().__init__(fmt.format(self.response, self.code, self.text))
+        super().__init__(fmt.format(self.response, self.text))
 
 
 class Unauthorized(HTTPException):
