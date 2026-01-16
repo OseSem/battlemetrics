@@ -7,6 +7,9 @@
 
 An async Python wrapper for the BattleMetrics API with full type safety using Pydantic models.
 
+>[!CAUTION]
+> This API Wrapper is very new and partly untested. Please report any issues instantly.
+
 ## Installation
 
 To install the latest published version off of PyPI, you can run the following command:
