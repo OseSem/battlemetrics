@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from .base import Base, BaseRelationships, Relationship
 
@@ -40,17 +40,21 @@ PlayerFlagIcon = Literal[
 class FlagPlayerAttributes(BaseModel):
     """Attributes for the FlagPlayer model."""
 
-    addedAt: str
-    removedAt: str | None = None
+    added_at: str = Field(alias="addedAt")
+    removed_at: str | None = Field(default=None, alias="removedAt")
+
+    model_config = {
+        "populate_by_name": True,
+    }
 
 
 class FlagPlayerRelationships(BaseRelationships):
     """Relationships for the FlagPlayer model."""
 
-    organization: Relationship
-    player: Relationship
-    playerFlag: Relationship
-    user: Relationship
+    organization: Relationship | None = None
+    player: Relationship | None = None
+    player_flag: Relationship | None = Field(default=None, alias="playerFlag")
+    user: Relationship | None = None
 
 
 class FlagPlayer(Base):
@@ -65,11 +69,15 @@ class PlayerFlagAttributes(BaseModel):
     """Attributes for the PlayerFlag model."""
 
     color: str
-    createdAt: str
+    created_at: str = Field(alias="createdAt")
     description: str | None = None
     icon: PlayerFlagIcon = None
     name: str
-    updatedAt: str
+    updated_at: str = Field(alias="updatedAt")
+
+    model_config = {
+        "populate_by_name": True,
+    }
 
 
 class PlayerFlagMeta(BaseModel):
@@ -81,8 +89,8 @@ class PlayerFlagMeta(BaseModel):
 class PlayerFlagRelationships(BaseRelationships):
     """Relationships for the PlayerFlag model."""
 
-    organization: Relationship
-    user: Relationship
+    organization: Relationship | None = None
+    user: Relationship | None = None
 
 
 class PlayerFlag(Base):
@@ -90,5 +98,5 @@ class PlayerFlag(Base):
 
     type: str = "playerFlag"
     attributes: PlayerFlagAttributes
-    meta: PlayerFlagMeta
+    meta: PlayerFlagMeta | None = None
     relationships: PlayerFlagRelationships

@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from .base import Base, BaseRelationships, Relationship
 
@@ -9,20 +9,28 @@ class PlayerQueryConditions(BaseModel):
     """Conditions for the PlayerQuery model."""
 
     score: float
-    scoreType: Literal["score", "pow", "multiplier"]
+    score_type: Literal["score", "pow", "multiplier"] = Field(alias="scoreType")
     types: list[str | None]
+
+    model_config = {
+        "populate_by_name": True,
+    }
 
 
 class PlayerQueryAttributes(BaseModel):
     """Attributes for the PlayerQuery model."""
 
     conditions: PlayerQueryConditions
-    createdAt: str
-    queryName: str
-    updatedAt: str
+    created_at: str = Field(alias="createdAt")
+    query_name: str = Field(alias="queryName")
+    updated_at: str = Field(alias="updatedAt")
+
+    model_config = {
+        "populate_by_name": True,
+    }
 
 
-class PlayerQueryRelationships(BaseModel):
+class PlayerQueryRelationships(BaseRelationships):
     """Relationships for the PlayerQuery model."""
 
     organization: Relationship

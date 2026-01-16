@@ -1,6 +1,6 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-from .base import Base, Relationship
+from .base import Base, BaseRelationships, Relationship
 
 
 class SessionMetadata(BaseModel):
@@ -14,12 +14,16 @@ class SessionMetadata(BaseModel):
 class SessionAttributes(BaseModel):
     """Attributes for the Session model."""
 
-    firstTime: bool
+    first_time: bool = Field(alias="firstTime")
     metadata: list[SessionMetadata] | None = None
     name: str
     private: bool
     start: str
     stop: str | None = None
+
+    model_config = {
+        "populate_by_name": True,
+    }
 
 
 class IdentifierRelationship(BaseModel):
@@ -29,13 +33,13 @@ class IdentifierRelationship(BaseModel):
     type: str = "identifier"
 
 
-class SessionRelationships(BaseModel):
+class SessionRelationships(BaseRelationships):
     """Relationships for the Session model."""
 
-    identifiers: list[IdentifierRelationship]
-    organization: Relationship
-    player: Relationship
-    server: Relationship
+    identifiers: list[IdentifierRelationship] | None = None
+    organization: Relationship | None = None
+    player: Relationship | None = None
+    server: Relationship | None = None
 
 
 class Session(Base):

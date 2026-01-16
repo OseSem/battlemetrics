@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from .base import Base, BaseRelationships, IdentifierTypesLiteral, Relationship
 from .server import ServerData
@@ -7,12 +7,16 @@ from .server import ServerData
 class PlayerAttributes(BaseModel):
     """Attributes for the Player model."""
 
-    createdAt: str
+    created_at: str = Field(alias="createdAt")
     id: str
     name: str
-    positiveMatch: bool
+    positive_match: bool = Field(alias="positiveMatch")
     private: bool
-    updatedAt: str
+    updated_at: str = Field(alias="updatedAt")
+
+    model_config = {
+        "populate_by_name": True,
+    }
 
 
 class PlayerMeta(BaseModel):
@@ -31,8 +35,8 @@ class PlayerMeta(BaseModel):
 class PlayerRelationships(BaseRelationships):
     """Relationships for the Player model."""
 
-    organizations: Relationship
-    server: Relationship
+    organizations: list[Relationship] | None = None
+    server: Relationship | None = None
     servers: list[ServerData] | None = None
     user: Relationship | None = None
 
@@ -42,7 +46,7 @@ class Player(Base):
 
     type: str = "player"
     attributes: PlayerAttributes
-    meta: PlayerMeta
+    meta: PlayerMeta | None = None
     relationships: PlayerRelationships
 
 
@@ -50,10 +54,14 @@ class PlayerIdentifierAttributes(BaseModel):
     """Attributes for the PlayerIdentifier model."""
 
     identifier: str
-    lastSeen: str
+    last_seen: str = Field(alias="lastSeen")
     metadata: object | None = None
     private: bool
     type: IdentifierTypesLiteral  # type: ignore[reportInvalidTypeForm]
+
+    model_config = {
+        "populate_by_name": True,
+    }
 
 
 class PlayerIdentifierRelationships(BaseRelationships):
@@ -97,12 +105,16 @@ class PlayerCounter(Base):
 class PlayerStatsAttributes(BaseModel):
     """Attributes for the PlayerStats model."""
 
-    firstTimeSessionDuration: float
-    maxPlayers: float
-    minPlayers: float
-    sessionDuration: float
-    uniquePlayers: float
-    uniquePlayersByCountry: float
+    first_time_session_duration: float = Field(alias="firstTimeSessionDuration")
+    max_players: float = Field(alias="maxPlayers")
+    min_players: float = Field(alias="minPlayers")
+    session_duration: float = Field(alias="sessionDuration")
+    unique_players: float = Field(alias="uniquePlayers")
+    unique_players_by_country: float = Field(alias="uniquePlayersByCountry")
+
+    model_config = {
+        "populate_by_name": True,
+    }
 
 
 class PlayerStatsRelationships(BaseRelationships):
@@ -125,10 +137,14 @@ class RelatedPlayerIdentifierAttributes(BaseModel):
     """Attributes for the RelatedPlayerIdentifier model."""
 
     identifier: str
-    lastSeen: str
+    last_seen: str = Field(alias="lastSeen")
     metadata: object | None = None
     private: bool
     type: IdentifierTypesLiteral  # type: ignore[reportInvalidTypeForm]
+
+    model_config = {
+        "populate_by_name": True,
+    }
 
 
 class RelatedPlayerIdentifierRelationships(BaseRelationships):
@@ -136,14 +152,18 @@ class RelatedPlayerIdentifierRelationships(BaseRelationships):
 
     organizations: Relationship
     player: Relationship
-    relatedIdentifier: Relationship
-    relatedPlayers: Relationship
+    related_identifier: Relationship = Field(alias="relatedIdentifier")
+    related_players: Relationship = Field(alias="relatedPlayers")
 
 
 class RelatedPlayerIdentifierMeta(BaseModel):
     """Metadata for the RelatedPlayerIdentifier model."""
 
-    commonIdentifier: bool
+    common_identifier: bool = Field(alias="commonIdentifier")
+
+    model_config = {
+        "populate_by_name": True,
+    }
 
 
 class RelatedPlayerIdentifier(Base):

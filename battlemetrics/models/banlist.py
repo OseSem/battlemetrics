@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from .base import Base, BaseRelationships, Relationship
 from .server import ServerData
@@ -10,18 +10,34 @@ class BanListAttributes(BaseModel):
     """Attributes for the BanList model."""
 
     action: Literal["none", "log", "kick"] | None
-    defaultAutoAddEnabled: bool
-    defaultIdentifiers: list[str] = []
-    defaultNativeEnabled: bool | None = None
-    defaultReasons: list[str] = []
+    default_auto_add_enabled: bool = Field(alias="defaultAutoAddEnabled")
+    default_identifiers: list[str] = Field(
+        default_factory=list,
+        alias="defaultIdentifiers",
+    )
+    default_native_enabled: bool | None = Field(
+        default=None,
+        alias="defaultNativeEnabled",
+    )
+    default_reasons: list[str] = Field(default_factory=list, alias="defaultReasons")
     name: str
-    nativeBanPermMaxExpires: int | None = None
-    nativeBanTTL: int | None = None
-    nativeBanTempMaxExpires: int | None = None
-    permCreate: bool
-    permDelete: bool
-    permManage: bool
-    permUpdate: bool
+    native_ban_perm_max_expires: int | None = Field(
+        default=None,
+        alias="nativeBanPermMaxExpires",
+    )
+    native_ban_ttl: int | None = Field(default=None, alias="nativeBanTTL")
+    native_ban_temp_max_expires: int | None = Field(
+        default=None,
+        alias="nativeBanTempMaxExpires",
+    )
+    perm_create: bool = Field(alias="permCreate")
+    perm_delete: bool = Field(alias="permDelete")
+    perm_manage: bool = Field(alias="permManage")
+    perm_update: bool = Field(alias="permUpdate")
+
+    model_config = {
+        "populate_by_name": True,
+    }
 
 
 class BanListRelationships(BaseRelationships):
@@ -50,7 +66,7 @@ class BanListExemptionRelationships(BaseRelationships):
     """Relationships for the BanListExemption model."""
 
     ban: Relationship
-    banList: Relationship
+    ban_list: Relationship = Field(alias="banList")
 
 
 class BanListExemption(Base):
@@ -66,17 +82,21 @@ class BanListInviteAttributes(BaseModel):
     """Attributes for the BanListInvite model."""
 
     limit: int | None
-    permCreate: bool
-    permDelete: bool
-    permManage: bool
-    permUpdate: bool
+    perm_create: bool = Field(alias="permCreate")
+    perm_delete: bool = Field(alias="permDelete")
+    perm_manage: bool = Field(alias="permManage")
+    perm_update: bool = Field(alias="permUpdate")
     uses: int
+
+    model_config = {
+        "populate_by_name": True,
+    }
 
 
 class BanListInviteRelationships(BaseRelationships):
     """Relationships for the BanListInvite model."""
 
-    banList: Relationship
+    ban_list: Relationship = Field(alias="banList")
     organization: Relationship
     user: Relationship
 

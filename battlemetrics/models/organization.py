@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from .base import Base, BaseRelationships, Relationship
 
@@ -7,25 +7,29 @@ class OrganizationAttributes(BaseModel):
     """Attributes specific to the Organization model."""
 
     active: bool
-    banTemplate: str
-    consentAPIKeysRequired: bool
-    consentGeoIPRequired: bool
-    consentOrganizationsRequired: bool
-    dataSharingEnabled: bool
+    ban_template: str = Field(alias="banTemplate")
+    consent_api_keys_required: bool = Field(alias="consentAPIKeysRequired")
+    consent_geo_ip_required: bool = Field(alias="consentGeoIPRequired")
+    consent_organizations_required: bool = Field(alias="consentOrganizationsRequired")
+    data_sharing_enabled: bool = Field(alias="dataSharingEnabled")
     discoverable: bool
-    discoverableRank: int | None = None
+    discoverable_rank: int | None = Field(default=None, alias="discoverableRank")
     locale: str | None = None
-    mfaRequired: bool
+    mfa_required: bool = Field(alias="mfaRequired")
     name: str
     plan: str | None = None
     tz: str | None = None
+
+    model_config = {
+        "populate_by_name": True,
+    }
 
 
 class OrganizationRelationships(BaseRelationships):
     """Relationships for the Organization model."""
 
-    banLists: Relationship
-    defaultBanList: Relationship | None = None
+    ban_lists: Relationship = Field(alias="banLists")
+    default_ban_list: Relationship | None = Field(default=None, alias="defaultBanList")
     games: Relationship
     owner: Relationship
     servers: Relationship
@@ -43,7 +47,7 @@ class OrganizationFriendAttributes(BaseModel):
     """Attributes for the OrganizationFriend model."""
 
     accepted: bool
-    identifiers = list[str] | None
+    identifiers: list[str] | None
     notes: bool
     reciprocated: bool
 
@@ -51,8 +55,8 @@ class OrganizationFriendAttributes(BaseModel):
 class OrganizationFriendRelationships(BaseRelationships):
     """Relationships for the OrganizationFriend model."""
 
-    flagsShared: Relationship
-    flagsUsed: Relationship
+    flags_shared: Relationship = Field(alias="flagsShared")
+    flags_used: Relationship = Field(alias="flagsUsed")
     friend: Relationship
     organization: Relationship
 
@@ -68,9 +72,13 @@ class OrganizationFriend(Base):
 class OrganizationStatsAttributes(BaseModel):
     """Attributes for the Organization Stats model."""
 
-    gameRanks: dict[str, int]
+    game_ranks: dict[str, int] = Field(alias="gameRanks")
     identifiers: float
-    uniquePlayers: float
+    unique_players: float = Field(alias="uniquePlayers")
+
+    model_config = {
+        "populate_by_name": True,
+    }
 
 
 class OrganizationStatsRelationships(BaseRelationships):
