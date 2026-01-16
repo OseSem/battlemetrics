@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import warnings
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -33,6 +34,8 @@ if TYPE_CHECKING:
     from aiohttp import BaseConnector, BasicAuth
 
 __all__ = ("Battlemetrics",)
+
+_log = logging.getLogger(__name__)
 
 
 class Battlemetrics:
@@ -897,6 +900,7 @@ class Battlemetrics:
         """Get a player."""
         resp = await self.http.get_player(player_id, include=include)
         included = resp.get("included")
+        _log.debug(included)
         return Player.model_validate({**resp["data"], "included": included})
 
     async def match_players(self, identifiers: list[dict[str, str]]) -> list[Player]:
