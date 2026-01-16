@@ -50,7 +50,7 @@ class Player(Base):
     attributes: PlayerAttributes
     meta: PlayerMeta | None = None
     relationships: PlayerRelationships
-    included: dict[str, Any] | None = None
+    included: list[dict[str, Any]] | None = None
 
 
 class PlayerIdentifierAttributes(BaseModel):
