@@ -1,0 +1,5 @@
+bans.info
+Added "include"
+"include": "server,user,playerIdentifiers,organization,banExemption"
+
+"banList" returns an error
