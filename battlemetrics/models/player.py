@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 from .base import Base, BaseRelationships, IdentifierTypesLiteral, Relationship
@@ -48,6 +50,7 @@ class Player(Base):
     attributes: PlayerAttributes
     meta: PlayerMeta | None = None
     relationships: PlayerRelationships
+    included: dict[str, Any] | None = None
 
 
 class PlayerIdentifierAttributes(BaseModel):
