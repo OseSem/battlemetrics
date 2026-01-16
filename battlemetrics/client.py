@@ -16,7 +16,11 @@ from battlemetrics.models.organization import (
     OrganizationFriend,
     OrganizationStats,
 )
-from battlemetrics.models.player import Player, RelatedPlayerIdentifier
+from battlemetrics.models.player import (
+    Player,
+    QuickMatchIdentifier,
+    RelatedPlayerIdentifier,
+)
 from battlemetrics.models.query import PlayerQuery, PlayerQueryResult
 from battlemetrics.models.server import ReservedSlot, Server
 from battlemetrics.models.session import Session
@@ -902,10 +906,25 @@ class Battlemetrics:
     async def quick_match_players(
         self,
         identifiers: list[dict[str, str]],
-    ) -> list[Player]:
-        """Quick match players."""
+    ) -> list[QuickMatchIdentifier]:
+        """Quick match players by identifiers.
+
+        This API method is rate limited to 10 requests per second.
+        Enterprise users have a higher rate limit of 30 requests per second.
+
+        Parameters
+        ----------
+        identifiers : list[dict[str, str]]
+            A list of identifier dicts with 'type' and 'identifier' keys.
+            Example: [{"type": "steamID", "identifier": "76561197960265720"}]
+
+        Returns
+        -------
+        list[QuickMatchIdentifier]
+            A list of matched identifiers with player relationships.
+        """
         resp = await self.http.quick_match_players(identifiers)
-        return [Player.model_validate(p) for p in resp["data"]]
+        return [QuickMatchIdentifier.model_validate(p) for p in resp["data"]]
 
     async def player_session_history(
         self,

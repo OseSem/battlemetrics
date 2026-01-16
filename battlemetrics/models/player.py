@@ -133,6 +133,38 @@ class PlayerStats(Base):
     relationships: PlayerStatsRelationships
 
 
+class QuickMatchIdentifierAttributes(BaseModel):
+    """Attributes for the QuickMatchIdentifier model."""
+
+    type: IdentifierTypesLiteral  # type: ignore[reportInvalidTypeForm]
+    identifier: str
+    last_seen: str = Field(alias="lastSeen")
+    private: bool
+    metadata: object | None = None
+
+    model_config = {
+        "populate_by_name": True,
+    }
+
+
+class QuickMatchIdentifierRelationships(BaseRelationships):
+    """Relationships for the QuickMatchIdentifier model."""
+
+    player: Relationship
+    organizations: list[Relationship] | None = None
+
+
+class QuickMatchIdentifier(Base):
+    """QuickMatchIdentifier model representing a quick match result.
+
+    This is returned by the POST /players/quick-match endpoint.
+    """
+
+    type: str = "identifier"
+    attributes: QuickMatchIdentifierAttributes
+    relationships: QuickMatchIdentifierRelationships
+
+
 class RelatedPlayerIdentifierAttributes(BaseModel):
     """Attributes for the RelatedPlayerIdentifier model."""
 
