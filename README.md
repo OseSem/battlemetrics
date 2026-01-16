@@ -10,6 +10,9 @@ An async Python wrapper for the BattleMetrics API with full type safety using Py
 >[!CAUTION]
 > This API Wrapper is very new and partly untested. Please report any issues instantly.
 
+>[!NOTE]
+> Since the BattleMetrics API Documentation is partly finished not every endpoint might be included. Make an Issue Report for any missing endpoints.
+
 ## Installation
 
 To install the latest published version off of PyPI, you can run the following command:
