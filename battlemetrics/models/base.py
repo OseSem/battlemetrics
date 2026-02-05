@@ -5,11 +5,11 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field, field_validator
 
 __all__ = (
-    "Base",
-    "Relationship",
-    "BaseRelationships",
     "IDENTIFIER_TYPES",
+    "Base",
+    "BaseRelationships",
     "IdentifierTypesLiteral",
+    "Relationship",
 )
 
 IDENTIFIER_TYPES = [

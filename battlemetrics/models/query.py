@@ -63,4 +63,3 @@ class PlayerQueryResult(Base):
     type: str = "playerQueryResult"
     attributes: PlayerQueryResultAttributes
     relationships: PlayerQueryResultRelationships
-    relationships: PlayerQueryResultRelationships

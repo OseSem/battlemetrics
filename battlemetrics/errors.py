@@ -2,7 +2,7 @@ from typing import Any
 
 from aiohttp import ClientResponse
 
-__all__ = ("BMException", "HTTPException", "Unauthorized", "Forbidden", "NotFound")
+__all__ = ("BMException", "Forbidden", "HTTPException", "NotFound", "Unauthorized")
 
 
 class BMException(Exception):
@@ -40,9 +40,7 @@ class HTTPException(BMException):
         if isinstance(message, dict):
             error = message["errors"][0]
             self.code = (
-                int(error.get("status", ""))
-                if str(error.get("status", "")).isdigit()
-                else 0
+                int(error.get("status", "")) if str(error.get("status", "")).isdigit() else 0
             )
             self.text = error.get("title", "")
             self.title = error.get("title", "")

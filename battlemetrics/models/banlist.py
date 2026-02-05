@@ -75,7 +75,6 @@ class BanListExemption(Base):
     type: str = "banExemption"
     attributes: BanListExemptionAttributes
     relationships: BanListExemptionRelationships
-    relationships: BanListExemptionRelationships
 
 
 class BanListInviteAttributes(BaseModel):

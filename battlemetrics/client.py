@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import warnings
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, Self
 
 from battlemetrics.http import HTTPClient
 from battlemetrics.models.ban import Ban, NativeBan
@@ -76,7 +76,7 @@ class Battlemetrics:
             proxy_auth=proxy_auth,
         )
 
-    async def __aenter__(self) -> "Battlemetrics":
+    async def __aenter__(self) -> Self:
         """Enter the context manager and return the Battlemetrics client."""
         return self
 
@@ -107,9 +107,7 @@ class Battlemetrics:
         org_wide: bool = True,
         auto_add_enabled: bool = True,
         native_enabled: bool = True,
-        identifiers: (
-            list[str | dict[str, Any]] | None
-        ) = None,  # TODO: Add player object
+        identifiers: list[str | dict[str, Any]] | None = None,  # TODO: Add player object
         expires: str | None = None,
     ) -> Ban:
         """Create a ban with all required and optional parameters."""
@@ -355,9 +353,7 @@ class Battlemetrics:
             Will raise if the request fails or the response indicates an error.
         """
         resp = await self.http.list_banlist_exemptions(ban_id=ban_id)
-        return [
-            BanListExemption.model_validate(exemption) for exemption in resp["data"]
-        ]
+        return [BanListExemption.model_validate(exemption) for exemption in resp["data"]]
 
     async def update_banlist_exemption(
         self,
