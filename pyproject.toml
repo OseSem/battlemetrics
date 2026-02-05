@@ -43,7 +43,7 @@ packages = ["battlemetrics"]
 typeCheckingMode = "strict"
 reportReturnType = false
 reportUnnecessaryComparison = false
-exclude = ["examples"]
+include = ["battlemetrics"]
 
 [tool.ruff]
 line-length = 100
