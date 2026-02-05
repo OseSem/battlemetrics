@@ -40,7 +40,9 @@ class HTTPException(BMException):
         if isinstance(message, dict):
             error = message["errors"][0]
             self.code = (
-                int(error.get("status", "")) if str(error.get("status", "")).isdigit() else 0
+                int(error.get("status", ""))
+                if str(error.get("status", "")).isdigit()
+                else 0
             )
             self.text = error.get("title", "")
             self.title = error.get("title", "")
