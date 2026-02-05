@@ -80,7 +80,6 @@ class PlayerIdentifier(Base):
     type: str = "playerIdentifier"
     attributes: PlayerIdentifierAttributes
     relationships: PlayerIdentifierRelationships
-    relationships: PlayerIdentifierRelationships
 
 
 class PlayerCounterAttributes(BaseModel):

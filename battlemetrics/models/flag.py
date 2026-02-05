@@ -4,37 +4,39 @@ from pydantic import BaseModel, Field
 
 from .base import Base, BaseRelationships, Relationship
 
-PlayerFlagIcon = Literal[
-    None,
-    "flag",
-    "alarm",
-    "attach_money",
-    "block",
-    "bookmark",
-    "check_circle_outline",
-    "emoji_objects",
-    "enhanced_encryption",
-    "error_outline",
-    "highlight_off",
-    "info",
-    "label",
-    "loyalty",
-    "monetization_on",
-    "note_add",
-    "notifications",
-    "notification_important",
-    "policy",
-    "verified_user",
-    "priority_high",
-    "remove_circle",
-    "report",
-    "star",
-    "thumb_down",
-    "thumb_up",
-    "visibility",
-    "warning",
-    "whatshot",
-]
+PlayerFlagIcon = (
+    Literal[
+        "flag",
+        "alarm",
+        "attach_money",
+        "block",
+        "bookmark",
+        "check_circle_outline",
+        "emoji_objects",
+        "enhanced_encryption",
+        "error_outline",
+        "highlight_off",
+        "info",
+        "label",
+        "loyalty",
+        "monetization_on",
+        "note_add",
+        "notifications",
+        "notification_important",
+        "policy",
+        "verified_user",
+        "priority_high",
+        "remove_circle",
+        "report",
+        "star",
+        "thumb_down",
+        "thumb_up",
+        "visibility",
+        "warning",
+        "whatshot",
+    ]
+    | None
+)
 
 
 class FlagPlayerAttributes(BaseModel):

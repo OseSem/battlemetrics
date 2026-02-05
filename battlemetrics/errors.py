@@ -2,7 +2,7 @@ from typing import Any
 
 from aiohttp import ClientResponse
 
-__all__ = ("BMException", "HTTPException", "Unauthorized", "Forbidden", "NotFound")
+__all__ = ("BMException", "Forbidden", "HTTPException", "NotFound", "Unauthorized")
 
 
 class BMException(Exception):

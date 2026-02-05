@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import warnings
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, Self
 
 from battlemetrics.http import HTTPClient
 from battlemetrics.models.ban import Ban, NativeBan
@@ -76,7 +76,7 @@ class Battlemetrics:
             proxy_auth=proxy_auth,
         )
 
-    async def __aenter__(self) -> "Battlemetrics":
+    async def __aenter__(self) -> Self:
         """Enter the context manager and return the Battlemetrics client."""
         return self
 
