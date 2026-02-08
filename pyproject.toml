@@ -43,10 +43,12 @@ packages = ["battlemetrics"]
 typeCheckingMode = "strict"
 reportReturnType = false
 reportUnnecessaryComparison = false
+include = ["battlemetrics"]
 
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+exclude = ["examples"]
 
 [tool.ruff.lint]
 select = ["ALL"]
