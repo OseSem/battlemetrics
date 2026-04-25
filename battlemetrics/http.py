@@ -132,15 +132,6 @@ class HTTPClient:
 
         self.api_key: str = api_key
 
-    def __aexit__(
-        self,
-        exc_type: BaseException | None,
-        exc_value: BaseException | None,
-        traceback: TracebackType | None,
-    ) -> None:
-        """Close the HTTP client when exiting."""
-        return self.close()
-
     def ensure_session(self) -> None:
         """
         Ensure that a ClientSession is created and open.
