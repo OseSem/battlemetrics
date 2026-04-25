@@ -48,6 +48,7 @@ class Battlemetrics:
         self,
         api_key: str,
         *,
+        timeout: float = 30.0,
         connector: BaseConnector | None = None,
         proxy: str | None = None,
         proxy_auth: BasicAuth | None = None,
@@ -56,6 +57,7 @@ class Battlemetrics:
 
         self.http = HTTPClient(
             api_key=self.__api_key,
+            timeout=timeout,
             connector=connector,
             proxy=proxy,
             proxy_auth=proxy_auth,

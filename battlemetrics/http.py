@@ -118,10 +118,12 @@ class HTTPClient:
         self,
         api_key: str,
         *,
+        timeout: float = 30.0,
         connector: BaseConnector | None = None,
         proxy: str | None = None,
         proxy_auth: aiohttp.BasicAuth | None = None,
     ) -> None:
+        self.timeout = aiohttp.ClientTimeout(total=timeout)
         self.connector = connector
         self.proxy = proxy
         self.proxy_auth = proxy_auth
@@ -140,6 +142,7 @@ class HTTPClient:
         if not self.__session or self.__session.closed:
             self.__session = aiohttp.ClientSession(
                 connector=self.connector,
+                timeout=self.timeout,
             )
         return self.__session
 
