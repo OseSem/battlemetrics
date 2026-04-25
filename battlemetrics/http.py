@@ -126,7 +126,7 @@ class HTTPClient:
         self.proxy = proxy
         self.proxy_auth = proxy_auth
 
-        self.__session: ClientSession | None = None  # type: ignore[reportAttributeAccessIssue]
+        self.__session: ClientSession | None = None
 
         self.api_key: str = api_key
 
