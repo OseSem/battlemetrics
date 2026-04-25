@@ -11,8 +11,6 @@ import yarl
 from .errors import BMException, Forbidden, HTTPException, NotFound, Unauthorized
 
 if TYPE_CHECKING:
-    from types import TracebackType
-
     from aiohttp import BaseConnector, ClientResponse, ClientSession
     from yarl import URL
 
@@ -132,7 +130,7 @@ class HTTPClient:
 
         self.api_key: str = api_key
 
-    def ensure_session(self) -> None:
+    def ensure_session(self) -> ClientSession:
         """
         Ensure that a ClientSession is created and open.
 
@@ -143,6 +141,7 @@ class HTTPClient:
             self.__session = aiohttp.ClientSession(
                 connector=self.connector,
             )
+        return self.__session
 
     async def close(self) -> None:
         """Close the ClientSession if it exists and is open."""
@@ -177,7 +176,7 @@ class HTTPClient:
             Will raise if the request fails or the response indicates an error.
             Might raise a more specific exception if the response status code is known.
         """
-        self.ensure_session()
+        session: ClientSession = self.ensure_session()
 
         method = route.method
         url = route.url
@@ -200,7 +199,7 @@ class HTTPClient:
         if self.proxy_auth:
             kwargs["proxy_auth"] = self.proxy_auth
 
-        async with self.__session.request(method, url, **kwargs) as response:
+        async with session.request(method, url, **kwargs) as response:
             _log.debug("%s %s returned %s", method, path, response.status)
 
             # errors typically have text involved, so this should be safe 99.5% of the time.
