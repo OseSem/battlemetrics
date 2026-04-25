@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import asyncio
 import logging
-import warnings
 from typing import TYPE_CHECKING, Any, Literal, Self
 
 from battlemetrics.http import HTTPClient
@@ -28,7 +26,6 @@ from battlemetrics.models.session import Session
 from battlemetrics.models.user import User
 
 if TYPE_CHECKING:
-    from asyncio import AbstractEventLoop
     from types import TracebackType
 
     from aiohttp import BaseConnector, BasicAuth
@@ -51,27 +48,15 @@ class Battlemetrics:
         self,
         api_key: str,
         *,
-        asyncio_debug: bool = False,
         connector: BaseConnector | None = None,
-        loop: AbstractEventLoop | None = None,
         proxy: str | None = None,
         proxy_auth: BasicAuth | None = None,
     ) -> None:
         self.__api_key = api_key
 
-        if loop is None:
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", DeprecationWarning)
-                self.loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
-        else:
-            self.loop: asyncio.AbstractEventLoop = loop
-
-        self.loop.set_debug(asyncio_debug)
-
         self.http = HTTPClient(
             api_key=self.__api_key,
             connector=connector,
-            loop=loop,
             proxy=proxy,
             proxy_auth=proxy_auth,
         )
@@ -107,9 +92,7 @@ class Battlemetrics:
         org_wide: bool = True,
         auto_add_enabled: bool = True,
         native_enabled: bool = True,
-        identifiers: (
-            list[str | dict[str, Any]] | None
-        ) = None,  # TODO: Add player object
+        identifiers: list[str | dict[str, Any]] | None = None,  # TODO: Add player object
         expires: str | None = None,
     ) -> Ban:
         """Create a ban with all required and optional parameters."""
@@ -355,9 +338,7 @@ class Battlemetrics:
             Will raise if the request fails or the response indicates an error.
         """
         resp = await self.http.list_banlist_exemptions(ban_id=ban_id)
-        return [
-            BanListExemption.model_validate(exemption) for exemption in resp["data"]
-        ]
+        return [BanListExemption.model_validate(exemption) for exemption in resp["data"]]
 
     async def update_banlist_exemption(
         self,

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import uuid
 from enum import Enum
 from logging import getLogger
@@ -12,7 +11,6 @@ import yarl
 from .errors import BMException, Forbidden, HTTPException, NotFound, Unauthorized
 
 if TYPE_CHECKING:
-    from asyncio import AbstractEventLoop
     from types import TracebackType
 
     from aiohttp import BaseConnector, ClientResponse, ClientSession
@@ -112,9 +110,7 @@ class Route:
     ) -> None:
         self.method: str = method
         url = path if path.startswith(("http://", "https://")) else f"{self.BASE}{path}"
-        self.url: URL = (
-            yarl.URL(url).update_query(**parameters) if parameters else yarl.URL(url)
-        )
+        self.url: URL = yarl.URL(url).update_query(**parameters) if parameters else yarl.URL(url)
 
 
 class HTTPClient:
@@ -125,11 +121,9 @@ class HTTPClient:
         api_key: str,
         *,
         connector: BaseConnector | None = None,
-        loop: AbstractEventLoop | None = None,
         proxy: str | None = None,
         proxy_auth: aiohttp.BasicAuth | None = None,
     ) -> None:
-        self.loop = loop or asyncio.get_event_loop()
         self.connector = connector
         self.proxy = proxy
         self.proxy_auth = proxy_auth
@@ -137,8 +131,6 @@ class HTTPClient:
         self.__session: ClientSession = None  # type: ignore[reportAttributeAccessIssue]
 
         self.api_key: str = api_key
-
-        self.ensure_session()
 
     def __aexit__(
         self,
@@ -151,19 +143,18 @@ class HTTPClient:
 
     def ensure_session(self) -> None:
         """
-        Ensure that an :class:`ClientSession` is created and open.
+        Ensure that a ClientSession is created and open.
 
-        If a session does not exist, this method creates a new :class:`ClientSession`
-        using the provided connector and loop.
+        If a session does not exist, this method creates a new ClientSession
+        using the provided connector.
         """
         if not self.__session or self.__session.closed:
             self.__session = aiohttp.ClientSession(
                 connector=self.connector,
-                loop=self.loop,
             )
 
     async def close(self) -> None:
-        """Close the :class:`ClientSession` if it exists and is open."""
+        """Close the ClientSession if it exists and is open."""
         if self.__session:
             await self.__session.close()
 
@@ -1364,9 +1355,7 @@ class HTTPClient:
     async def match_players(self, identifiers: list[dict[str, str]]) -> dict[str, Any]:
         """Match players by identifiers (slow full match)."""
         data = {
-            "data": [
-                {"type": "identifier", "attributes": ident} for ident in identifiers
-            ],
+            "data": [{"type": "identifier", "attributes": ident} for ident in identifiers],
         }
         return await self.request(
             Route(method="POST", path="/players/match"),
@@ -1379,9 +1368,7 @@ class HTTPClient:
     ) -> dict[str, Any]:
         """Quick match players by identifiers."""
         data = {
-            "data": [
-                {"type": "identifier", "attributes": ident} for ident in identifiers
-            ],
+            "data": [{"type": "identifier", "attributes": ident} for ident in identifiers],
         }
         return await self.request(
             Route(method="POST", path="/players/quick-match"),
@@ -1626,9 +1613,7 @@ class HTTPClient:
                 "relationships": {
                     "player": {"data": {"type": "player", "id": str(player_id)}},
                     "servers": {
-                        "data": [
-                            {"type": "server", "id": str(sid)} for sid in server_ids
-                        ],
+                        "data": [{"type": "server", "id": str(sid)} for sid in server_ids],
                     },
                     "organization": {
                         "data": {"type": "organization", "id": str(organization_id)},
@@ -2294,9 +2279,7 @@ class HTTPClient:
         }
         if player_flags:
             relationships["playerFlags"] = {
-                "data": [
-                    {"type": "playerFlag", "id": flag_id} for flag_id in player_flags
-                ],
+                "data": [{"type": "playerFlag", "id": flag_id} for flag_id in player_flags],
             }
         data = {
             "data": {
@@ -2334,9 +2317,7 @@ class HTTPClient:
         relationships: dict[str, Any] = {}
         if player_flags is not None:
             relationships["playerFlags"] = {
-                "data": [
-                    {"type": "playerFlag", "id": flag_id} for flag_id in player_flags
-                ],
+                "data": [{"type": "playerFlag", "id": flag_id} for flag_id in player_flags],
             }
         data: dict[str, Any] = {
             "data": {
