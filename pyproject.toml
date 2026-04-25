@@ -45,6 +45,9 @@ reportReturnType = false
 reportUnnecessaryComparison = false
 include = ["battlemetrics"]
 
+[tool.ty.environment]
+python = "./.venv"
+
 [tool.ruff]
 line-length = 100
 target-version = "py312"
