@@ -59,7 +59,6 @@ ignore = [
     "ERA001", # commented out code.
     "D100",   # docstrings in public modules.
     "D104",   # docstrings in public package.
-    "ANN101", # self type hint.
     "ANN401", # Any type hint.
     "N815",   # Mixed case variable name.
     "N818",   # Error suffix.
