@@ -73,6 +73,9 @@ ignore = [
     "TD002",  # Author in TODO
     "TD003",  # Issue Link in TODO
     "FIX002", # TODO Found
+
+    "COM812", # Conflicts with ruff format.
+    "ISC001", # Conflicts with ruff format.
 ]
 
 [tool.ruff.lint.per-file-ignores]
