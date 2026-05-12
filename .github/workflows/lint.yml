@@ -45,7 +45,7 @@ jobs:
       - name: Add venv to PATH
         run: echo "$(uv run python -c 'import sys; print(sys.prefix)')/bin" >> $GITHUB_PATH
 
-      - uses: jakebailey/pyright-action@v2
+      - uses: jakebailey/pyright-action@v3
 
   # Thanks to https://github.com/DisnakeDev for finding this job.
   check: # This job does nothing and is only used for the branch protection
