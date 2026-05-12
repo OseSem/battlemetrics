@@ -165,4 +165,4 @@ class ReservedSlot(Base):
 
     type: str = "reservedSlot"
     attributes: ReservedSlotAttributes
-    meta: dict[str, Any]
+    meta: dict[str, Any] | None = None

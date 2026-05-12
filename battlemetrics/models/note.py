@@ -6,7 +6,7 @@ from .base import Base, BaseRelationships, Relationship
 class NoteAttributes(BaseModel):
     """Attributes for the Note model."""
 
-    clearance_level: int = Field(alias="clearanceLevel")
+    clearance_level: int | None = Field(default=None, alias="clearanceLevel")
     created_at: str = Field(alias="createdAt")
     expires_at: str | None = Field(default=None, alias="expiresAt")
     note: str
