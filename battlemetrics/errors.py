@@ -94,10 +94,12 @@ class RateLimited(HTTPException):
 
     Attributes
     ----------
-    retry_after: :class:`float` | None
-        The number of seconds to wait before retrying, parsed from the
-        ``Retry-After`` response header. ``None`` if the server did not
-        provide one.
+    limit: :class:`int` | None
+        The rate-limit budget per window, parsed from the
+        ``X-Rate-Limit-Limit`` response header.
+    remaining: :class:`int` | None
+        The remaining requests in the current window, parsed from the
+        ``X-Rate-Limit-Remaining`` response header.
     """
 
     def __init__(
@@ -106,12 +108,10 @@ class RateLimited(HTTPException):
         message: str | dict[str, Any] | list[Any] | None,
     ) -> None:
         super().__init__(response, message)
-        retry_after = response.headers.get("Retry-After")
-        self.retry_after: float | None = (
-            float(retry_after)
-            if retry_after and retry_after.replace(".", "", 1).isdigit()
-            else None
-        )
+        limit = response.headers.get("X-Rate-Limit-Limit")
+        remaining = response.headers.get("X-Rate-Limit-Remaining")
+        self.limit: int | None = int(limit) if limit and limit.isdigit() else None
+        self.remaining: int | None = int(remaining) if remaining and remaining.isdigit() else None
 
 
 class ServerError(HTTPException):
