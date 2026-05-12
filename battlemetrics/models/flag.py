@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -42,8 +43,8 @@ PlayerFlagIcon = (
 class FlagPlayerAttributes(BaseModel):
     """Attributes for the FlagPlayer model."""
 
-    added_at: str = Field(alias="addedAt")
-    removed_at: str | None = Field(default=None, alias="removedAt")
+    added_at: datetime = Field(alias="addedAt")
+    removed_at: datetime | None = Field(default=None, alias="removedAt")
 
     model_config = {
         "populate_by_name": True,
@@ -71,11 +72,11 @@ class PlayerFlagAttributes(BaseModel):
     """Attributes for the PlayerFlag model."""
 
     color: str
-    created_at: str = Field(alias="createdAt")
+    created_at: datetime = Field(alias="createdAt")
     description: str | None = None
     icon: PlayerFlagIcon = None
     name: str
-    updated_at: str = Field(alias="updatedAt")
+    updated_at: datetime = Field(alias="updatedAt")
 
     model_config = {
         "populate_by_name": True,

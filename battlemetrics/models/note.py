@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, Field
 
 from .base import Base, BaseRelationships, Relationship
@@ -6,9 +8,9 @@ from .base import Base, BaseRelationships, Relationship
 class NoteAttributes(BaseModel):
     """Attributes for the Note model."""
 
-    clearance_level: int = Field(alias="clearanceLevel")
-    created_at: str = Field(alias="createdAt")
-    expires_at: str | None = Field(default=None, alias="expiresAt")
+    clearance_level: int | None = Field(default=None, alias="clearanceLevel")
+    created_at: datetime = Field(alias="createdAt")
+    expires_at: datetime | None = Field(default=None, alias="expiresAt")
     note: str
     shared: bool
 

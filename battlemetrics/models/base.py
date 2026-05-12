@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any, Literal, TypedDict
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -8,6 +8,7 @@ __all__ = (
     "IDENTIFIER_TYPES",
     "Base",
     "BaseRelationships",
+    "IdentifierInput",
     "IdentifierTypesLiteral",
     "Relationship",
 )
@@ -33,6 +34,13 @@ IDENTIFIER_TYPES = [
     "reforgerUUID",
 ]
 IdentifierTypesLiteral = Literal[*IDENTIFIER_TYPES]
+
+
+class IdentifierInput(TypedDict):
+    """Input shape for match_players / quick_match_players."""
+
+    type: IdentifierTypesLiteral  # type: ignore[reportInvalidTypeForm]
+    identifier: str
 
 
 class Base(BaseModel):

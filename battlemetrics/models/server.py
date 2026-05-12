@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
@@ -52,7 +53,7 @@ class ServerAttributes(BaseModel):
 
     address: str | None = None
     country: str
-    created_at: str = Field(alias="createdAt")
+    created_at: datetime = Field(alias="createdAt")
     details: dict[str, Any] | None = None
     id: str
     ip: str
@@ -67,11 +68,11 @@ class ServerAttributes(BaseModel):
     query_status: str | None = Field(default=None, alias="queryStatus")
     rank: int | None = None
     rcon_active: bool | None = Field(default=None, alias="rconActive")
-    rcon_disconnected: str | None = Field(default=None, alias="rconDisconnected")
-    rcon_last_connected: str | None = Field(default=None, alias="rconLastConnected")
+    rcon_disconnected: datetime | None = Field(default=None, alias="rconDisconnected")
+    rcon_last_connected: datetime | None = Field(default=None, alias="rconLastConnected")
     rcon_status: str | None = Field(default=None, alias="rconStatus")
     status: str
-    updated_at: str = Field(alias="updatedAt")
+    updated_at: datetime = Field(alias="updatedAt")
 
     model_config = {
         "populate_by_name": True,
@@ -142,8 +143,8 @@ class Server(Base):
 class ReservedSlotAttributes(BaseModel):
     """Attributes for the ReservedSlot model."""
 
-    created_at: str = Field(alias="createdAt")
-    expires: str | None = None
+    created_at: datetime = Field(alias="createdAt")
+    expires: datetime | None = None
     identifiers: list[str]
 
     model_config = {
@@ -165,4 +166,4 @@ class ReservedSlot(Base):
 
     type: str = "reservedSlot"
     attributes: ReservedSlotAttributes
-    meta: dict[str, Any]
+    meta: dict[str, Any] | None = None

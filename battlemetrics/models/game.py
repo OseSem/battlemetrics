@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -83,7 +84,7 @@ class GameFeatureOptionsAttributes(BaseModel):
     count: int
     display: str
     players: int
-    updated_at: str = Field(alias="updatedAt")
+    updated_at: datetime = Field(alias="updatedAt")
 
     model_config = {
         "populate_by_name": True,

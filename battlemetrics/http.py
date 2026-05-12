@@ -1,46 +1,32 @@
 from __future__ import annotations
 
-import asyncio
-import uuid
-from enum import Enum
+import secrets
 from logging import getLogger
 from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 import aiohttp
 import yarl
 
-from .errors import BMException, Forbidden, HTTPException, NotFound, Unauthorized
+from .errors import (
+    BadRequest,
+    BMConnectionError,
+    BMTimeoutError,
+    Forbidden,
+    HTTPException,
+    NotFound,
+    RateLimited,
+    ServerError,
+    Unauthorized,
+)
 
 if TYPE_CHECKING:
-    from asyncio import AbstractEventLoop
-    from types import TracebackType
-
     from aiohttp import BaseConnector, ClientResponse, ClientSession
     from yarl import URL
 
+    from .models.base import IdentifierInput
+
 
 _log = getLogger(__name__)
-
-
-class IdentifierType(Enum):
-    """A player identifier type."""
-
-    BE_GUID = "BEGUID"
-    BE_LEGACY_GUID = "legacyBEGUID"
-    CONAN_CHAR_NAME = "conanCharName"
-    EGS_ID = "egsID"
-    FUNCOM_ID = "funcomID"
-    IP = "ip"
-    MC_UUID = "mcUUID"
-    NAME = "name"
-    PLAY_FAB_ID = "playFabID"
-    STEAM_FAMILY_SHARE_OWNER = "steamFamilyShareOwner"
-    STEAM_ID = "steamID"
-    SURVIVOR_NAME = "survivorName"
-
-    def __repr__(self) -> str:
-        """Return a string representation of the identifier type."""
-        return f"<{self.__class__.__name__}.{self.name}>"
 
 
 async def json_or_text(
@@ -72,17 +58,7 @@ async def json_or_text(
     return await response.text(encoding="utf-8")
 
 
-METHODS = Literal[
-    "GET",
-    "HEAD",
-    "OPTIONS",
-    "TRACE",
-    "PUT",
-    "DELETE",
-    "POST",
-    "PATCH",
-    "CONNECT",
-]
+METHODS = Literal["GET", "POST", "PATCH", "DELETE"]
 
 
 class Route:
@@ -112,9 +88,7 @@ class Route:
     ) -> None:
         self.method: str = method
         url = path if path.startswith(("http://", "https://")) else f"{self.BASE}{path}"
-        self.url: URL = (
-            yarl.URL(url).update_query(**parameters) if parameters else yarl.URL(url)
-        )
+        self.url: URL = yarl.URL(url).update_query(**parameters) if parameters else yarl.URL(url)
 
 
 class HTTPClient:
@@ -124,48 +98,70 @@ class HTTPClient:
         self,
         api_key: str,
         *,
+        timeout: float = 30.0,
         connector: BaseConnector | None = None,
-        loop: AbstractEventLoop | None = None,
         proxy: str | None = None,
         proxy_auth: aiohttp.BasicAuth | None = None,
     ) -> None:
-        self.loop = loop or asyncio.get_event_loop()
+        self.timeout = aiohttp.ClientTimeout(total=timeout)
         self.connector = connector
         self.proxy = proxy
         self.proxy_auth = proxy_auth
 
-        self.__session: ClientSession = None  # type: ignore[reportAttributeAccessIssue]
+        self.__session: ClientSession | None = None
 
         self.api_key: str = api_key
 
-        self.ensure_session()
-
-    def __aexit__(
-        self,
-        exc_type: BaseException | None,
-        exc_value: BaseException | None,
-        traceback: TracebackType | None,
-    ) -> None:
-        """Close the HTTP client when exiting."""
-        return self.close()
-
-    def ensure_session(self) -> None:
+    def ensure_session(self) -> ClientSession:
         """
-        Ensure that an :class:`ClientSession` is created and open.
+        Ensure that a ClientSession is created and open.
 
-        If a session does not exist, this method creates a new :class:`ClientSession`
-        using the provided connector and loop.
+        If a session does not exist (or the previous one was closed), this
+        method creates a new ClientSession. A user-supplied connector is
+        treated as borrowed (``connector_owner=False``), so close() will
+        not destroy it.
         """
         if not self.__session or self.__session.closed:
             self.__session = aiohttp.ClientSession(
                 connector=self.connector,
-                loop=self.loop,
+                connector_owner=self.connector is None,
+                timeout=self.timeout,
             )
+        return self.__session
 
     async def close(self) -> None:
-        """Close the :class:`ClientSession` if it exists and is open."""
+        """Close the ClientSession if it exists and is open."""
         if self.__session:
             await self.__session.close()
+
+    @staticmethod
+    def _raise_for_status(
+        response: ClientResponse,
+        data: dict[str, Any] | list[dict[str, Any]] | str,
+        path: str,
+    ) -> None:
+        """Map a non-2xx response to the appropriate typed exception."""
+        status = response.status
+        if status == 400:
+            raise BadRequest(response, data)
+        if status == 401:
+            _log.warning("Path %s returned 401, your API key may be invalid.", path)
+            raise Unauthorized(response, data)
+        if status == 403:
+            _log.warning("Path %s returned 403, check whether you have valid permissions.", path)
+            raise Forbidden(response, data)
+        if status == 404:
+            _log.warning("Path %s returned 404, check whether the path is correct.", path)
+            raise NotFound(response, data)
+        if status == 429:
+            _log.warning(
+                "We're being rate limited. You are limited to %s requests per minute.",
+                response.headers.get("X-Rate-Limit-Limit"),
+            )
+            raise RateLimited(response, data)
+        if 500 <= status < 600:
+            raise ServerError(response, data)
+        raise HTTPException(response, data)
 
     async def request(
         self,
@@ -195,7 +191,7 @@ class HTTPClient:
             Will raise if the request fails or the response indicates an error.
             Might raise a more specific exception if the response status code is known.
         """
-        self.ensure_session()
+        session: ClientSession = self.ensure_session()
 
         method = route.method
         url = route.url
@@ -218,43 +214,24 @@ class HTTPClient:
         if self.proxy_auth:
             kwargs["proxy_auth"] = self.proxy_auth
 
-        async with self.__session.request(method, url, **kwargs) as response:
-            _log.debug("%s %s returned %s", method, path, response.status)
+        try:
+            async with session.request(method, url, **kwargs) as response:
+                _log.debug("%s %s returned %s", method, path, response.status)
 
-            # errors typically have text involved, so this should be safe 99.5% of the time.
-            data = await json_or_text(response)
+                # errors typically have text involved, so this should be safe 99.5% of the time.
+                data = await json_or_text(response)
 
-            if 200 <= response.status < 300:
-                return data
+                if 200 <= response.status < 300:
+                    return data
 
-            if isinstance(data, dict):
-                if response.status == 401:
-                    _log.warning(
-                        "Path %s returned 401, your API key may be invalid.",
-                        path,
-                    )
-                    raise Unauthorized(response, data)
-                if response.status == 403:
-                    _log.warning(
-                        "Path %s returned 403, check whether you have valid permissions.",
-                        path,
-                    )
-                    raise Forbidden(response, data)
-                if response.status == 404:
-                    _log.warning(
-                        "Path %s returned 404, check whether the path is correct.",
-                        path,
-                    )
-                    raise NotFound(response, data)
-                if response.status == 429:
-                    _log.warning(
-                        "We're being rate limited. You are limited to %s requests per minute.",
-                        response.headers.get("X-Rate-Limit-Limit"),
-                    )
-
-                raise HTTPException(response, data)
-
-            raise BMException
+                self._raise_for_status(response, data, path)
+                return None  # unreachable; _raise_for_status always raises
+        except TimeoutError as e:
+            msg = f"Request to {path} timed out"
+            raise BMTimeoutError(msg) from e
+        except aiohttp.ClientError as e:
+            msg = f"Connection error reaching {path}: {e}"
+            raise BMConnectionError(msg) from e
 
     # HTTP Requests
 
@@ -278,7 +255,7 @@ class HTTPClient:
             "data": {
                 "type": "ban",
                 "attributes": {
-                    "uid": str(uuid.uuid4())[:14],
+                    "uid": secrets.token_hex(7),
                     "reason": reason,
                     "note": note,
                     "expires": expires,
@@ -479,11 +456,14 @@ class HTTPClient:
         note: str | None = None,
         identifiers: list[str | dict[str, Any]] | None = None,
         expires: str | None = None,
-        org_wide: bool = True,
-        auto_add_enabled: bool = True,
-        native_enabled: bool = True,
+        org_wide: bool | None = None,
+        auto_add_enabled: bool | None = None,
+        native_enabled: bool | None = None,
     ) -> dict[str, Any]:
         """Update a specific ban by its ID.
+
+        Only fields explicitly passed will be sent. Omitted fields are
+        preserved server-side.
 
         Parameters
         ----------
@@ -495,18 +475,20 @@ class HTTPClient:
         BMException
             Will raise if the request fails or the response indicates an error.
         """
+        attributes: dict[str, Any] = {
+            "reason": reason,
+            "note": note,
+            "expires": expires,
+            "identifiers": identifiers,
+            "orgWide": org_wide,
+            "autoAddEnabled": auto_add_enabled,
+            "nativeEnabled": native_enabled,
+        }
+        attributes = {k: v for k, v in attributes.items() if v is not None}
         data: dict[str, Any] = {
             "data": {
                 "type": "ban",
-                "attributes": {
-                    "reason": reason,
-                    "note": note,
-                    "expires": expires,
-                    "identifiers": identifiers or [],  # TODO: Add identifier handling
-                    "orgWide": org_wide,
-                    "autoAddEnabled": auto_add_enabled,
-                    "nativeEnabled": native_enabled,
-                },
+                "attributes": attributes,
             },
         }
         return await self.request(
@@ -1058,15 +1040,21 @@ class HTTPClient:
         *,
         fields: list[str] | None = None,
     ) -> dict[str, Any]:
-        """Get data points for metrics. Each metric dict should include name, range, resolution."""
+        """Get data points for metrics.
+
+        Each metric dict must include a "name" key plus any of "range" or
+        "resolution". Multiple metrics are supported; each is encoded as
+        ``metrics[<name>][<key>]=<value>``.
+        """
         params: dict[str, Any] = {}
         if fields:
             params["fields[dataPoint]"] = ",".join(fields)
-        # Only first metric supported in this convenience wrapper; call multiple times for more.
         for metric in metrics:
+            name = metric["name"]
             for key, value in metric.items():
-                params[f"metrics[{key}]"] = value
-            break  # only first metric for now (API supports multiple via different encoding)
+                if key == "name":
+                    continue
+                params[f"metrics[{name}][{key}]"] = value
         return await self.request(Route(method="GET", path="/metrics"), params=params)
 
     # ------------------------------ Player Flags -------------------------- #
@@ -1361,12 +1349,10 @@ class HTTPClient:
             params=params,
         )
 
-    async def match_players(self, identifiers: list[dict[str, str]]) -> dict[str, Any]:
+    async def match_players(self, identifiers: list[IdentifierInput]) -> dict[str, Any]:
         """Match players by identifiers (slow full match)."""
         data = {
-            "data": [
-                {"type": "identifier", "attributes": ident} for ident in identifiers
-            ],
+            "data": [{"type": "identifier", "attributes": ident} for ident in identifiers],
         }
         return await self.request(
             Route(method="POST", path="/players/match"),
@@ -1375,13 +1361,11 @@ class HTTPClient:
 
     async def quick_match_players(
         self,
-        identifiers: list[dict[str, str]],
+        identifiers: list[IdentifierInput],
     ) -> dict[str, Any]:
         """Quick match players by identifiers."""
         data = {
-            "data": [
-                {"type": "identifier", "attributes": ident} for ident in identifiers
-            ],
+            "data": [{"type": "identifier", "attributes": ident} for ident in identifiers],
         }
         return await self.request(
             Route(method="POST", path="/players/quick-match"),
@@ -1626,9 +1610,7 @@ class HTTPClient:
                 "relationships": {
                     "player": {"data": {"type": "player", "id": str(player_id)}},
                     "servers": {
-                        "data": [
-                            {"type": "server", "id": str(sid)} for sid in server_ids
-                        ],
+                        "data": [{"type": "server", "id": str(sid)} for sid in server_ids],
                     },
                     "organization": {
                         "data": {"type": "organization", "id": str(organization_id)},
@@ -1696,8 +1678,16 @@ class HTTPClient:
         expires: str | None = None,
         server_ids: list[int] | None = None,
     ) -> dict[str, Any]:
-        """Update a reserved slot."""
-        attributes = {"identifiers": identifiers or [], "expires": expires}
+        """Update a reserved slot.
+
+        Only fields explicitly passed will be sent. Omitted fields are
+        preserved server-side.
+        """
+        attributes: dict[str, Any] = {
+            "identifiers": identifiers,
+            "expires": expires,
+        }
+        attributes = {k: v for k, v in attributes.items() if v is not None}
         relationships: dict[str, Any] = {}
         if server_ids is not None:
             relationships["servers"] = {
@@ -2294,9 +2284,7 @@ class HTTPClient:
         }
         if player_flags:
             relationships["playerFlags"] = {
-                "data": [
-                    {"type": "playerFlag", "id": flag_id} for flag_id in player_flags
-                ],
+                "data": [{"type": "playerFlag", "id": flag_id} for flag_id in player_flags],
             }
         data = {
             "data": {
@@ -2334,9 +2322,7 @@ class HTTPClient:
         relationships: dict[str, Any] = {}
         if player_flags is not None:
             relationships["playerFlags"] = {
-                "data": [
-                    {"type": "playerFlag", "id": flag_id} for flag_id in player_flags
-                ],
+                "data": [{"type": "playerFlag", "id": flag_id} for flag_id in player_flags],
             }
         data: dict[str, Any] = {
             "data": {

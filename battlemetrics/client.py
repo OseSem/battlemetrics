@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import asyncio
 import logging
-import warnings
 from typing import TYPE_CHECKING, Any, Literal, Self
 
 from battlemetrics.http import HTTPClient
@@ -28,10 +26,11 @@ from battlemetrics.models.session import Session
 from battlemetrics.models.user import User
 
 if TYPE_CHECKING:
-    from asyncio import AbstractEventLoop
     from types import TracebackType
 
     from aiohttp import BaseConnector, BasicAuth
+
+    from battlemetrics.models.base import IdentifierInput
 
 __all__ = ("Battlemetrics",)
 
@@ -51,27 +50,17 @@ class Battlemetrics:
         self,
         api_key: str,
         *,
-        asyncio_debug: bool = False,
+        timeout: float = 30.0,
         connector: BaseConnector | None = None,
-        loop: AbstractEventLoop | None = None,
         proxy: str | None = None,
         proxy_auth: BasicAuth | None = None,
     ) -> None:
         self.__api_key = api_key
 
-        if loop is None:
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", DeprecationWarning)
-                self.loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
-        else:
-            self.loop: asyncio.AbstractEventLoop = loop
-
-        self.loop.set_debug(asyncio_debug)
-
         self.http = HTTPClient(
             api_key=self.__api_key,
+            timeout=timeout,
             connector=connector,
-            loop=loop,
             proxy=proxy,
             proxy_auth=proxy_auth,
         )
@@ -82,9 +71,9 @@ class Battlemetrics:
 
     async def __aexit__(
         self,
-        type: type[BaseException] | None,  # noqa: A002
-        value: BaseException | None,
-        tb: TracebackType | None,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
     ) -> None:
         """Close the client when exiting the context."""
         await self.close()
@@ -107,9 +96,7 @@ class Battlemetrics:
         org_wide: bool = True,
         auto_add_enabled: bool = True,
         native_enabled: bool = True,
-        identifiers: (
-            list[str | dict[str, Any]] | None
-        ) = None,  # TODO: Add player object
+        identifiers: list[str | dict[str, Any]] | None = None,  # TODO: Add player object
         expires: str | None = None,
     ) -> Ban:
         """Create a ban with all required and optional parameters."""
@@ -256,11 +243,14 @@ class Battlemetrics:
         note: str | None = None,
         identifiers: list[str | dict[str, Any]] | None = None,
         expires: str | None = None,
-        org_wide: bool = True,
-        auto_add_enabled: bool = True,
-        native_enabled: bool = True,
+        org_wide: bool | None = None,
+        auto_add_enabled: bool | None = None,
+        native_enabled: bool | None = None,
     ) -> Ban:
         """Update a specific ban by its ID.
+
+        Only fields explicitly passed will be sent. Omitted fields are
+        preserved server-side.
 
         Parameters
         ----------
@@ -310,7 +300,7 @@ class Battlemetrics:
         self,
         ban_id: int,
         ban_exemption_id: int,
-    ) -> dict[str, Any]:
+    ) -> BanListExemption:
         """Read a specific banlist exemption by its ID.
 
         Parameters
@@ -322,8 +312,8 @@ class Battlemetrics:
 
         Returns
         -------
-        dict[str, Any]
-            The response from the API containing the banlist exemption.
+        BanListExemption
+            The banlist exemption.
 
         Raises
         ------
@@ -336,7 +326,7 @@ class Battlemetrics:
         )
         return BanListExemption.model_validate(resp["data"])
 
-    async def list_banlist_exemptions(self, ban_id: int) -> dict[str, Any]:
+    async def list_banlist_exemptions(self, ban_id: int) -> list[BanListExemption]:
         """List all banlist exemptions for a specific ban.
 
         Parameters
@@ -346,8 +336,8 @@ class Battlemetrics:
 
         Returns
         -------
-        dict[str, Any]
-            The response from the API containing the list of banlist exemptions.
+        list[BanListExemption]
+            The list of banlist exemptions.
 
         Raises
         ------
@@ -355,31 +345,27 @@ class Battlemetrics:
             Will raise if the request fails or the response indicates an error.
         """
         resp = await self.http.list_banlist_exemptions(ban_id=ban_id)
-        return [
-            BanListExemption.model_validate(exemption) for exemption in resp["data"]
-        ]
+        return [BanListExemption.model_validate(exemption) for exemption in resp["data"]]
 
     async def update_banlist_exemption(
         self,
         ban_id: int,
         *,
         reason: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> BanListExemption:
         """Update a specific banlist exemption by its ID.
 
         Parameters
         ----------
         ban_id : int
             The ID of the ban to update.
-        ban_exemption_id : int
-            The ID of the ban exemption to update.
         reason : str | None
             The new reason for the ban exemption.
 
         Returns
         -------
-        dict[str, Any]
-            The response from the API containing the updated banlist exemption.
+        BanListExemption
+            The updated banlist exemption.
 
         Raises
         ------
@@ -402,13 +388,6 @@ class Battlemetrics:
         ----------
         ban_id : int
             The ID of the ban to delete the exemption from.
-        ban_exemption_id : int
-            The ID of the ban exemption to delete.
-
-        Returns
-        -------
-        dict[str, Any]
-            The response from the API confirming the deletion.
 
         Raises
         ------
@@ -902,14 +881,14 @@ class Battlemetrics:
         included = resp.get("included")
         return Player.model_validate({**resp["data"], "included": included})
 
-    async def match_players(self, identifiers: list[dict[str, str]]) -> list[Player]:
+    async def match_players(self, identifiers: list[IdentifierInput]) -> list[Player]:
         """Match players (slow)."""
         resp = await self.http.match_players(identifiers)
         return [Player.model_validate(p) for p in resp["data"]]
 
     async def quick_match_players(
         self,
-        identifiers: list[dict[str, str]],
+        identifiers: list[IdentifierInput],
     ) -> list[QuickMatchIdentifier]:
         """Quick match players by identifiers.
 
@@ -918,7 +897,7 @@ class Battlemetrics:
 
         Parameters
         ----------
-        identifiers : list[dict[str, str]]
+        identifiers : list[IdentifierInput]
             A list of identifier dicts with 'type' and 'identifier' keys.
             Example: [{"type": "steamID", "identifier": "76561197960265720"}]
 
