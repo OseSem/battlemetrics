@@ -109,6 +109,7 @@ class HTTPClient:
         self.proxy_auth = proxy_auth
 
         self.__session: ClientSession | None = None
+        self.__closed: bool = False
 
         self.api_key: str = api_key
 
@@ -117,8 +118,11 @@ class HTTPClient:
         Ensure that a ClientSession is created and open.
 
         If a session does not exist, this method creates a new ClientSession
-        using the provided connector.
+        using the provided connector. Raises if the client has been closed.
         """
+        if self.__closed:
+            msg = "HTTPClient is closed; create a new client to make further requests."
+            raise RuntimeError(msg)
         if not self.__session or self.__session.closed:
             self.__session = aiohttp.ClientSession(
                 connector=self.connector,
@@ -128,6 +132,7 @@ class HTTPClient:
 
     async def close(self) -> None:
         """Close the ClientSession if it exists and is open."""
+        self.__closed = True
         if self.__session:
             await self.__session.close()
 
