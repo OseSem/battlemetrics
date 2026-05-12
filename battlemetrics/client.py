@@ -30,6 +30,8 @@ if TYPE_CHECKING:
 
     from aiohttp import BaseConnector, BasicAuth
 
+    from battlemetrics.models.base import IdentifierInput
+
 __all__ = ("Battlemetrics",)
 
 _log = logging.getLogger(__name__)
@@ -876,14 +878,14 @@ class Battlemetrics:
         included = resp.get("included")
         return Player.model_validate({**resp["data"], "included": included})
 
-    async def match_players(self, identifiers: list[dict[str, str]]) -> list[Player]:
+    async def match_players(self, identifiers: list[IdentifierInput]) -> list[Player]:
         """Match players (slow)."""
         resp = await self.http.match_players(identifiers)
         return [Player.model_validate(p) for p in resp["data"]]
 
     async def quick_match_players(
         self,
-        identifiers: list[dict[str, str]],
+        identifiers: list[IdentifierInput],
     ) -> list[QuickMatchIdentifier]:
         """Quick match players by identifiers.
 
@@ -892,7 +894,7 @@ class Battlemetrics:
 
         Parameters
         ----------
-        identifiers : list[dict[str, str]]
+        identifiers : list[IdentifierInput]
             A list of identifier dicts with 'type' and 'identifier' keys.
             Example: [{"type": "steamID", "identifier": "76561197960265720"}]
 

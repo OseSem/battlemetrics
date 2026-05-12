@@ -23,6 +23,8 @@ if TYPE_CHECKING:
     from aiohttp import BaseConnector, ClientResponse, ClientSession
     from yarl import URL
 
+    from .models.base import IdentifierInput
+
 
 _log = getLogger(__name__)
 
@@ -1335,7 +1337,7 @@ class HTTPClient:
             params=params,
         )
 
-    async def match_players(self, identifiers: list[dict[str, str]]) -> dict[str, Any]:
+    async def match_players(self, identifiers: list[IdentifierInput]) -> dict[str, Any]:
         """Match players by identifiers (slow full match)."""
         data = {
             "data": [{"type": "identifier", "attributes": ident} for ident in identifiers],
@@ -1347,7 +1349,7 @@ class HTTPClient:
 
     async def quick_match_players(
         self,
-        identifiers: list[dict[str, str]],
+        identifiers: list[IdentifierInput],
     ) -> dict[str, Any]:
         """Quick match players by identifiers."""
         data = {
