@@ -104,5 +104,5 @@ class BanListInvite(Base):
     """Represents an invite to a ban list."""
 
     type: str = "banListInvite"
-    attributes: BaseModel
-    relationships: BaseRelationships
+    attributes: BanListInviteAttributes
+    relationships: BanListInviteRelationships
