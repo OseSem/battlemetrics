@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import uuid
-from enum import Enum
 from logging import getLogger
 from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
@@ -26,27 +25,6 @@ if TYPE_CHECKING:
 
 
 _log = getLogger(__name__)
-
-
-class IdentifierType(Enum):
-    """A player identifier type."""
-
-    BE_GUID = "BEGUID"
-    BE_LEGACY_GUID = "legacyBEGUID"
-    CONAN_CHAR_NAME = "conanCharName"
-    EGS_ID = "egsID"
-    FUNCOM_ID = "funcomID"
-    IP = "ip"
-    MC_UUID = "mcUUID"
-    NAME = "name"
-    PLAY_FAB_ID = "playFabID"
-    STEAM_FAMILY_SHARE_OWNER = "steamFamilyShareOwner"
-    STEAM_ID = "steamID"
-    SURVIVOR_NAME = "survivorName"
-
-    def __repr__(self) -> str:
-        """Return a string representation of the identifier type."""
-        return f"<{self.__class__.__name__}.{self.name}>"
 
 
 async def json_or_text(
@@ -78,17 +56,7 @@ async def json_or_text(
     return await response.text(encoding="utf-8")
 
 
-METHODS = Literal[
-    "GET",
-    "HEAD",
-    "OPTIONS",
-    "TRACE",
-    "PUT",
-    "DELETE",
-    "POST",
-    "PATCH",
-    "CONNECT",
-]
+METHODS = Literal["GET", "POST", "PATCH", "DELETE"]
 
 
 class Route:
