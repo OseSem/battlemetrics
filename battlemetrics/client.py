@@ -243,11 +243,14 @@ class Battlemetrics:
         note: str | None = None,
         identifiers: list[str | dict[str, Any]] | None = None,
         expires: str | None = None,
-        org_wide: bool = True,
-        auto_add_enabled: bool = True,
-        native_enabled: bool = True,
+        org_wide: bool | None = None,
+        auto_add_enabled: bool | None = None,
+        native_enabled: bool | None = None,
     ) -> Ban:
         """Update a specific ban by its ID.
+
+        Only fields explicitly passed will be sent. Omitted fields are
+        preserved server-side.
 
         Parameters
         ----------

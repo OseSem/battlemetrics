@@ -456,11 +456,14 @@ class HTTPClient:
         note: str | None = None,
         identifiers: list[str | dict[str, Any]] | None = None,
         expires: str | None = None,
-        org_wide: bool = True,
-        auto_add_enabled: bool = True,
-        native_enabled: bool = True,
+        org_wide: bool | None = None,
+        auto_add_enabled: bool | None = None,
+        native_enabled: bool | None = None,
     ) -> dict[str, Any]:
         """Update a specific ban by its ID.
+
+        Only fields explicitly passed will be sent. Omitted fields are
+        preserved server-side.
 
         Parameters
         ----------
@@ -476,12 +479,12 @@ class HTTPClient:
             "reason": reason,
             "note": note,
             "expires": expires,
+            "identifiers": identifiers,
             "orgWide": org_wide,
             "autoAddEnabled": auto_add_enabled,
             "nativeEnabled": native_enabled,
         }
-        if identifiers is not None:
-            attributes["identifiers"] = identifiers
+        attributes = {k: v for k, v in attributes.items() if v is not None}
         data: dict[str, Any] = {
             "data": {
                 "type": "ban",
@@ -1675,10 +1678,16 @@ class HTTPClient:
         expires: str | None = None,
         server_ids: list[int] | None = None,
     ) -> dict[str, Any]:
-        """Update a reserved slot."""
-        attributes: dict[str, Any] = {"expires": expires}
-        if identifiers is not None:
-            attributes["identifiers"] = identifiers
+        """Update a reserved slot.
+
+        Only fields explicitly passed will be sent. Omitted fields are
+        preserved server-side.
+        """
+        attributes: dict[str, Any] = {
+            "identifiers": identifiers,
+            "expires": expires,
+        }
+        attributes = {k: v for k, v in attributes.items() if v is not None}
         relationships: dict[str, Any] = {}
         if server_ids is not None:
             relationships["servers"] = {
