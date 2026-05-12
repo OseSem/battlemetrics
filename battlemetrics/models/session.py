@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, Field
 
 from .base import Base, BaseRelationships, Relationship
@@ -18,8 +20,8 @@ class SessionAttributes(BaseModel):
     metadata: list[SessionMetadata] | None = None
     name: str
     private: bool
-    start: str
-    stop: str | None = None
+    start: datetime
+    stop: datetime | None = None
 
     model_config = {
         "populate_by_name": True,

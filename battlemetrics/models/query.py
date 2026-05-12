@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -21,9 +22,9 @@ class PlayerQueryAttributes(BaseModel):
     """Attributes for the PlayerQuery model."""
 
     conditions: PlayerQueryConditions
-    created_at: str = Field(alias="createdAt")
+    created_at: datetime = Field(alias="createdAt")
     query_name: str = Field(alias="queryName")
-    updated_at: str = Field(alias="updatedAt")
+    updated_at: datetime = Field(alias="updatedAt")
 
     model_config = {
         "populate_by_name": True,

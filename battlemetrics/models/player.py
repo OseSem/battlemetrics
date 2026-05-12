@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -9,12 +10,12 @@ from .server import ServerData
 class PlayerAttributes(BaseModel):
     """Attributes for the Player model."""
 
-    created_at: str = Field(alias="createdAt")
+    created_at: datetime = Field(alias="createdAt")
     id: str
     name: str
     positive_match: bool = Field(alias="positiveMatch")
     private: bool
-    updated_at: str = Field(alias="updatedAt")
+    updated_at: datetime = Field(alias="updatedAt")
 
     model_config = {
         "populate_by_name": True,
@@ -57,7 +58,7 @@ class PlayerIdentifierAttributes(BaseModel):
     """Attributes for the PlayerIdentifier model."""
 
     identifier: str
-    last_seen: str = Field(alias="lastSeen")
+    last_seen: datetime = Field(alias="lastSeen")
     metadata: object | None = None
     private: bool
     type: IdentifierTypesLiteral  # type: ignore[reportInvalidTypeForm]
@@ -140,7 +141,7 @@ class QuickMatchIdentifierAttributes(BaseModel):
 
     type: IdentifierTypesLiteral  # type: ignore[reportInvalidTypeForm]
     identifier: str
-    last_seen: str = Field(alias="lastSeen")
+    last_seen: datetime = Field(alias="lastSeen")
     private: bool
     metadata: object | None = None
 
@@ -171,7 +172,7 @@ class RelatedPlayerIdentifierAttributes(BaseModel):
     """Attributes for the RelatedPlayerIdentifier model."""
 
     identifier: str
-    last_seen: str = Field(alias="lastSeen")
+    last_seen: datetime = Field(alias="lastSeen")
     metadata: object | None = None
     private: bool
     type: IdentifierTypesLiteral  # type: ignore[reportInvalidTypeForm]
