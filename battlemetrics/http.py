@@ -1039,15 +1039,21 @@ class HTTPClient:
         *,
         fields: list[str] | None = None,
     ) -> dict[str, Any]:
-        """Get data points for metrics. Each metric dict should include name, range, resolution."""
+        """Get data points for metrics.
+
+        Each metric dict must include a "name" key plus any of "range" or
+        "resolution". Multiple metrics are supported; each is encoded as
+        ``metrics[<name>][<key>]=<value>``.
+        """
         params: dict[str, Any] = {}
         if fields:
             params["fields[dataPoint]"] = ",".join(fields)
-        # Only first metric supported in this convenience wrapper; call multiple times for more.
         for metric in metrics:
+            name = metric["name"]
             for key, value in metric.items():
-                params[f"metrics[{key}]"] = value
-            break  # only first metric for now (API supports multiple via different encoding)
+                if key == "name":
+                    continue
+                params[f"metrics[{name}][{key}]"] = value
         return await self.request(Route(method="GET", path="/metrics"), params=params)
 
     # ------------------------------ Player Flags -------------------------- #
