@@ -7,7 +7,7 @@ from battlemetrics import Battlemetrics
 
 
 async def main() -> None:
-    api_key = os.environ.get("BATTLEMETRICS_API_KEY")
+    api_key = os.environ["BATTLEMETRICS_API_KEY"]
 
     async with Battlemetrics(api_key) as client:
         players = await client.list_players(search="shroud", page_size=5)
