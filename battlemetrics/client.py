@@ -295,7 +295,7 @@ class Battlemetrics:
         self,
         ban_id: int,
         ban_exemption_id: int,
-    ) -> dict[str, Any]:
+    ) -> BanListExemption:
         """Read a specific banlist exemption by its ID.
 
         Parameters
@@ -307,8 +307,8 @@ class Battlemetrics:
 
         Returns
         -------
-        dict[str, Any]
-            The response from the API containing the banlist exemption.
+        BanListExemption
+            The banlist exemption.
 
         Raises
         ------
@@ -321,7 +321,7 @@ class Battlemetrics:
         )
         return BanListExemption.model_validate(resp["data"])
 
-    async def list_banlist_exemptions(self, ban_id: int) -> dict[str, Any]:
+    async def list_banlist_exemptions(self, ban_id: int) -> list[BanListExemption]:
         """List all banlist exemptions for a specific ban.
 
         Parameters
@@ -331,8 +331,8 @@ class Battlemetrics:
 
         Returns
         -------
-        dict[str, Any]
-            The response from the API containing the list of banlist exemptions.
+        list[BanListExemption]
+            The list of banlist exemptions.
 
         Raises
         ------
@@ -347,22 +347,20 @@ class Battlemetrics:
         ban_id: int,
         *,
         reason: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> BanListExemption:
         """Update a specific banlist exemption by its ID.
 
         Parameters
         ----------
         ban_id : int
             The ID of the ban to update.
-        ban_exemption_id : int
-            The ID of the ban exemption to update.
         reason : str | None
             The new reason for the ban exemption.
 
         Returns
         -------
-        dict[str, Any]
-            The response from the API containing the updated banlist exemption.
+        BanListExemption
+            The updated banlist exemption.
 
         Raises
         ------
@@ -385,13 +383,6 @@ class Battlemetrics:
         ----------
         ban_id : int
             The ID of the ban to delete the exemption from.
-        ban_exemption_id : int
-            The ID of the ban exemption to delete.
-
-        Returns
-        -------
-        dict[str, Any]
-            The response from the API confirming the deletion.
 
         Raises
         ------

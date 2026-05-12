@@ -41,7 +41,6 @@ packages = ["battlemetrics"]
 
 [tool.pyright]
 typeCheckingMode = "strict"
-reportReturnType = false
 reportUnnecessaryComparison = false
 include = ["battlemetrics"]
 
