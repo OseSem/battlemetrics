@@ -69,9 +69,9 @@ class Battlemetrics:
 
     async def __aexit__(
         self,
-        type: type[BaseException] | None,  # noqa: A002
-        value: BaseException | None,
-        tb: TracebackType | None,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
     ) -> None:
         """Close the client when exiting the context."""
         await self.close()
