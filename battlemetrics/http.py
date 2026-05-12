@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import uuid
+import secrets
 from logging import getLogger
 from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
@@ -250,7 +250,7 @@ class HTTPClient:
             "data": {
                 "type": "ban",
                 "attributes": {
-                    "uid": str(uuid.uuid4())[:14],
+                    "uid": secrets.token_hex(7),
                     "reason": reason,
                     "note": note,
                     "expires": expires,
@@ -467,18 +467,20 @@ class HTTPClient:
         BMException
             Will raise if the request fails or the response indicates an error.
         """
+        attributes: dict[str, Any] = {
+            "reason": reason,
+            "note": note,
+            "expires": expires,
+            "orgWide": org_wide,
+            "autoAddEnabled": auto_add_enabled,
+            "nativeEnabled": native_enabled,
+        }
+        if identifiers is not None:
+            attributes["identifiers"] = identifiers
         data: dict[str, Any] = {
             "data": {
                 "type": "ban",
-                "attributes": {
-                    "reason": reason,
-                    "note": note,
-                    "expires": expires,
-                    "identifiers": identifiers or [],  # TODO: Add identifier handling
-                    "orgWide": org_wide,
-                    "autoAddEnabled": auto_add_enabled,
-                    "nativeEnabled": native_enabled,
-                },
+                "attributes": attributes,
             },
         }
         return await self.request(
@@ -1663,7 +1665,9 @@ class HTTPClient:
         server_ids: list[int] | None = None,
     ) -> dict[str, Any]:
         """Update a reserved slot."""
-        attributes = {"identifiers": identifiers or [], "expires": expires}
+        attributes: dict[str, Any] = {"expires": expires}
+        if identifiers is not None:
+            attributes["identifiers"] = identifiers
         relationships: dict[str, Any] = {}
         if server_ids is not None:
             relationships["servers"] = {
