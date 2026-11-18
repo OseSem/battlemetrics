@@ -171,7 +171,7 @@ class QuickMatchIdentifier(Base):
 class RelatedPlayerIdentifierAttributes(BaseModel):
     """Attributes for the RelatedPlayerIdentifier model."""
 
-    identifier: str
+    identifier: str | None = None
     last_seen: datetime = Field(alias="lastSeen")
     metadata: object | None = None
     private: bool
@@ -185,10 +185,10 @@ class RelatedPlayerIdentifierAttributes(BaseModel):
 class RelatedPlayerIdentifierRelationships(BaseRelationships):
     """Relationships for the RelatedPlayerIdentifier model."""
 
-    organizations: Relationship
+    organizations: list[Relationship] | None = None
     player: Relationship
-    related_identifier: Relationship = Field(alias="relatedIdentifier")
-    related_players: Relationship = Field(alias="relatedPlayers")
+    related_identifiers: list[Relationship] = Field(alias="relatedIdentifiers")
+    related_players: list[Relationship] = Field(alias="relatedPlayers")
 
 
 class RelatedPlayerIdentifierMeta(BaseModel):
@@ -206,5 +206,5 @@ class RelatedPlayerIdentifier(Base):
 
     type: str = "relatedPlayerIdentifier"
     attributes: RelatedPlayerIdentifierAttributes
-    meta: RelatedPlayerIdentifierMeta
+    meta: RelatedPlayerIdentifierMeta | None = None
     relationships: RelatedPlayerIdentifierRelationships
