@@ -25,7 +25,7 @@ class BanRelationships(BaseRelationships):
     """Relationships for the Ban model."""
 
     organization: Relationship
-    server: Relationship
+    server: Relationship | None = None
     player: Relationship
     ban_list: Relationship = Field(alias="banList")
     user: Relationship | None = None
