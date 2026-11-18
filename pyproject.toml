@@ -1,7 +1,7 @@
 [project]
 name = "battlemetrics"
 description = "Asyncronous Python wrapper for the BattleMetrics API."
-version = "2.1.0"
+version = "2.1.1"
 authors = [
     { name = "OseSem", email = "sem@osesem.xyz" },
     { name = "Gnomeslayer", email = "declan.otten@live.com.au" },
